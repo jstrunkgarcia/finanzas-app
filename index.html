@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Finanzas Personal</title>
+  <meta name="description" content="Control de gastos e inversión personal: presupuesto por categorías, seguimiento de aportes y patrimonio total." />
+  <meta name="theme-color" content="#0b0f14" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" type="image/png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main id="view" aria-live="polite"></main>
+
+  <nav id="tabs" aria-label="Navegación principal">
+    <button class="tab active" data-tab="gastos" type="button">
+      <span class="tab-icon">💸</span><span class="tab-label">Gastos</span>
+    </button>
+    <button class="tab" data-tab="objetivo" type="button">
+      <span class="tab-icon">🏡</span><span class="tab-label">Casa</span>
+    </button>
+    <button class="tab" data-tab="inversion" type="button">
+      <span class="tab-icon">📈</span><span class="tab-label">Inversión</span>
+    </button>
+    <button class="tab" data-tab="patrimonio" type="button">
+      <span class="tab-icon">🏦</span><span class="tab-label">Patrimonio</span>
+    </button>
+    <button class="tab" data-tab="ajustes" type="button">
+      <span class="tab-icon">⚙️</span><span class="tab-label">Ajustes</span>
+    </button>
+  </nav>
+
+  <div id="modal-root"></div>
+  <div id="toast" role="status"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
