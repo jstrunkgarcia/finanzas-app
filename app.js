@@ -3,7 +3,7 @@
 
 /* ============ Utilidades ============ */
 const $ = (sel, root = document) => root.querySelector(sel);
-const APP_VERSION = 'versión 19 · 4 nov 2026';
+const APP_VERSION = 'versión 20 · 4 nov 2026';
 const uid = () =>
   (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now().toString(36) + Math.random().toString(36).slice(2));
 
@@ -17,8 +17,16 @@ function parseAmount(v) {
   return isFinite(n) ? Math.round(n * 100) / 100 : null;
 }
 
-const eur = (n, decimales = 2) =>
-  new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: decimales, maximumFractionDigits: decimales }).format(n || 0);
+const eur = (n, decimales = 2) => {
+  const num = Number(n) || 0;
+  const partes = new Intl.NumberFormat('es-ES', {
+    minimumFractionDigits: decimales,
+    maximumFractionDigits: decimales,
+  }).format(Math.abs(num)).split(',');
+  // es-ES no agrupa los miles de 4 cifras; lo forzamos (1.300 en vez de 1300)
+  const entero = partes[0].replace(/\./g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${num < 0 ? '−' : ''}${entero}${partes[1] != null ? ',' + partes[1] : ''}\u00a0€`;
+};
 
 const eur0 = (n) => eur(n, 0);
 
@@ -65,6 +73,28 @@ function toast(msg, tipo = '') {
   t.className = `show ${tipo}`;
   clearTimeout(toast._t);
   toast._t = setTimeout(() => { t.className = ''; }, 2600);
+}
+
+/* Accesibilidad: prepara cualquier modal (rol, Escape y foco inicial) */
+function activarModal(overlay) {
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.tabIndex = -1;
+  overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') overlay.remove(); });
+  setTimeout(() => {
+    const el = overlay.querySelector('input:not([type="checkbox"]):not([type="radio"]), select, textarea, button');
+    if (el) { try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); } }
+  }, 60);
+}
+
+function marcarTabActiva(tab) {
+  const activo = tab === 'compartidos' ? 'gastos' : tab;
+  document.querySelectorAll('#tabs .tab').forEach((b) => {
+    const on = b.dataset.tab === activo;
+    b.classList.toggle('active', on);
+    if (on) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  });
 }
 
 /* ============ Estado ============ */
@@ -528,11 +558,11 @@ function lineaChart(valores, etiquetasX, { alto = 190, color = '#10b981' } = {})
     const step = Math.ceil(etiquetasX.length / 7);
     if (i % step !== 0 && i !== etiquetasX.length - 1) return '';
     const anchor = i === 0 ? 'start' : i === etiquetasX.length - 1 ? 'end' : 'middle';
-    return `<text x="${px(i)}" y="${alto - 6}" text-anchor="${anchor}" font-size="10" fill="#64748b">${escapeHtml(t)}</text>`;
+    return `<text x="${px(i)}" y="${alto - 6}" text-anchor="${anchor}" font-size="11" fill="#94a3b8">${escapeHtml(t)}</text>`;
   }).join('');
   const yLabels =
-    `<text x="${padL}" y="12" font-size="10" fill="#64748b">${eur0(max).replace(/\u00a0/g, ' ')}</text>` +
-    `<text x="${padL}" y="${alto - padB - 4}" font-size="10" fill="#64748b">${eur0(min).replace(/\u00a0/g, ' ')}</text>`;
+    `<text x="${padL}" y="12" font-size="11" fill="#94a3b8">${eur0(max).replace(/\u00a0/g, ' ')}</text>` +
+    `<text x="${padL}" y="${alto - padB - 4}" font-size="11" fill="#94a3b8">${eur0(min).replace(/\u00a0/g, ' ')}</text>`;
   const last = valores.length - 1;
   return `<svg viewBox="0 0 ${ancho} ${alto}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="gráfico de evolución">
     <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
@@ -555,7 +585,7 @@ function sparkDatos(valores, { w = 96, h = 30 } = {}) {
   const pts = valores.map((v, i) => `${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ');
   const sube = valores[valores.length - 1] >= valores[0];
   const color = sube ? '#22c55e' : '#f43f5e';
-  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  return `<svg class="spark" aria-hidden="true" focusable="false" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
     <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
     <circle cx="${px(valores.length - 1)}" cy="${py(valores[valores.length - 1])}" r="2.5" fill="${color}"/>
   </svg>`;
@@ -565,8 +595,7 @@ function sparkDatos(valores, { w = 96, h = 30 } = {}) {
 function irTab(tab) {
   ui.tab = tab;
   try { history.replaceState(null, '', '#' + tab); } catch (e) {}
-  const activo = tab === 'compartidos' ? 'gastos' : tab;
-  document.querySelectorAll('#tabs .tab').forEach((b) => { b.classList.toggle('active', b.dataset.tab === activo); });
+  marcarTabActiva(tab);
   render();
   window.scrollTo({ top: 0 });
 }
@@ -633,7 +662,7 @@ function vistaGastos(view) {
           <div class="cat-row">
             <span class="cat-name"><span class="dot" style="background:${c.color}"></span>${escapeHtml(c.nombre)}</span>
             <span class="pct ${cls}">${pct == null ? '' : fmtPct(pct, { conSigno: false, decimales: 0 })}</span>
-            <span class="cat-amounts"><strong>${eur(c.gastado)}</strong> de ${eur(c.presupuesto, 0)}${sobre ? '' : ` · quedan ${eur(Math.max(c.presupuesto - c.gastado, 0), 0)}`}</span>
+            <span class="cat-amounts"><strong>${eur(c.gastado)}</strong> de ${eur(c.presupuesto, 0)}${sobre ? ` · <strong class="pct-bad">te pasaste ${eur(c.gastado - c.presupuesto)}</strong>` : ` · quedan ${eur(Math.max(c.presupuesto - c.gastado, 0), 0)}`}</span>
             ${barra}
           </div>`;
       }
@@ -672,12 +701,21 @@ function vistaGastos(view) {
     ${cabecera('Gastos')}
     <div class="row-split" style="margin:0 4px 8px">
       <h2>Tu dinero ahora</h2>
-      <button class="btn secondary small" id="mini-ver" type="button" style="padding:5px 10px;font-size:0.75rem">Ver desglose ›</button>
+      <button class="btn secondary small" id="mini-ver" type="button" style="padding:5px 10px;font-size:0.78rem">Ver desglose ›</button>
     </div>
-    <div class="stat-grid" style="margin-bottom:14px">
-      <div class="stat"><div class="label">Ibercaja</div><div class="value">${eur0(saldos.diaadia)}</div><div class="hint" style="margin-top:2px">día a día</div></div>
-      <div class="stat"><div class="label">Trade Republic · efectivo</div><div class="value">${eur0(saldos.efectivoTR)}</div><div class="hint" style="margin-top:2px">colchón ${eur0(saldos.colchon)} · ahorro ${eur0(saldos.ahorro)}</div></div>
-      <div class="stat"><div class="label">Trade Republic · inversión</div><div class="value">${eur0(saldos.inversion)}</div><div class="hint" style="margin-top:2px">ETF en cartera</div></div>
+    <div class="card" style="padding:2px 16px;margin-bottom:12px">
+      <div class="money-row">
+        <div><div class="lbl">Ibercaja</div><div class="sub">Día a día</div></div>
+        <div class="val">${eur(saldos.diaadia)}</div>
+      </div>
+      <div class="money-row">
+        <div><div class="lbl">Trade Republic · efectivo</div><div class="sub">Colchón ${eur0(saldos.colchon)} · Ahorro ${eur0(saldos.ahorro)}</div></div>
+        <div class="val">${eur(saldos.efectivoTR)}</div>
+      </div>
+      <div class="money-row">
+        <div><div class="lbl">Trade Republic · inversión</div><div class="sub">ETF en cartera</div></div>
+        <div class="val">${eur(saldos.inversion)}</div>
+      </div>
     </div>
     <div class="card" style="padding:12px 14px;margin-bottom:12px">
       <div class="row-split">
@@ -747,6 +785,7 @@ function modalGasto(idGasto = null) {
   function cerrar() { overlay.remove(); }
   overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
   $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
   $('#g-monto', overlay).focus();
 
   overlay.querySelectorAll('[data-cat]').forEach((b) => {
@@ -884,18 +923,18 @@ function vistaObjetivo(view) {
   }).join('');
 
   const desglose = `
+    <div class="field"><label for="ob-precio">Precio de la vivienda (€)</label>
+      <input id="ob-precio" type="text" inputmode="decimal" value="${String(v.precio).replace('.', ',')}" /></div>
+    <div class="field"><label for="ob-fecha">Fecha de compra</label>
+      <input id="ob-fecha" type="month" value="${v.fechaObj || ''}" /></div>
     <div class="field-row" style="margin-bottom:0">
-      <div class="field"><label for="ob-precio">Precio orientativo (€)</label>
-        <input id="ob-precio" type="text" inputmode="decimal" value="${String(v.precio).replace('.', ',')}" /></div>
-      <div class="field"><label for="ob-fecha">Fecha objetivo de compra</label>
-        <input id="ob-fecha" type="month" value="${v.fechaObj || ''}" /></div>
-      <div class="field"><label for="ob-entrada">Entrada: % que no financia el banco</label>
+      <div class="field"><label for="ob-entrada">% de entrada</label>
         <input id="ob-entrada" type="text" inputmode="decimal" value="${String(v.pctEntrada).replace('.', ',')}" /></div>
-      <div class="field"><label for="ob-gastos">% gastos de compra (impuestos, notaría…)</label>
+      <div class="field"><label for="ob-gastos">% de gastos (10–12)</label>
         <input id="ob-gastos" type="text" inputmode="decimal" value="${String(v.pctGastos).replace('.', ',')}" /></div>
-      <div class="field"><label for="ob-margen">Margen mensual que pasas al fondo (€)</label>
-        <input id="ob-margen" type="text" inputmode="decimal" value="${String(v.margen).replace('.', ',')}" /></div>
     </div>
+    <div class="field"><label for="ob-margen">Margen extra al mes (€)</label>
+      <input id="ob-margen" type="text" inputmode="decimal" value="${String(v.margen).replace('.', ',')}" /></div>
     <p class="hint">Pagas extra al fondo vivienda: <strong>${eur0(v.extraAnual)}/año</strong> (según Ajustes → Pagas extra; ya están incluidas en el ritmo).</p>
     <p class="hint">Según el informe: entrada = 20 % del precio (hipoteca del 80 %) más un 10–12 % de impuestos y gastos. Ejemplo del informe: vivienda de ${eur0(v.precio)} → efectivo orientativo ≈ ${eur0(v.precio * 0.2)} (entrada) + ${eur0(v.precio * 0.10)}–${eur0(v.precio * 0.12)} (gastos) = objetivo ≈ ${eur0(v.precio * 0.30)}–${eur0(v.precio * 0.32)}. La reserva de emergencia y el día a día <strong>no</strong> cuentan para la entrada.</p>
   `;
@@ -916,8 +955,10 @@ function vistaObjetivo(view) {
 
     ${avisoVivienda}
 
-    <h2 style="margin:4px 4px 10px">Cómo se calcula el objetivo</h2>
-    <div class="card">${desglose}</div>
+    <details class="card" ${ui.objetivoAbierto ? 'open' : ''} id="ob-detalles">
+      <summary><span class="card-title" style="margin:0">Ajustar el objetivo</span><span class="chev">⌄</span></summary>
+      <div style="margin-top:14px">${desglose}</div>
+    </details>
 
     <h2 style="margin:18px 4px 10px">Proyección del fondo vivienda</h2>
     <table class="card table"><thead><tr><th>Horizonte</th><th>Fondo estimado</th><th>Del objetivo</th></tr></thead><tbody>${proyeccion}</tbody></table>
@@ -947,6 +988,8 @@ function vistaObjetivo(view) {
     guardarEstado();
     render();
   });
+  const detalles = $('#ob-detalles');
+  if (detalles) detalles.addEventListener('toggle', () => { ui.objetivoAbierto = detalles.open; });
 }
 
 /* ============ Vista: Inversión ============ */
@@ -1140,6 +1183,7 @@ function modalRegistrar(mk = null) {
   function cerrar() { overlay.remove(); }
   overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
   $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
 
   $('#reg-cancelar', overlay).onclick = cerrar;
   $('#reg-guardar', overlay).onclick = () => {
@@ -1674,10 +1718,12 @@ function vistaAnalisis(view) {
   desv.sort((a, b) => b.exceso - a.exceso);
   const desvHtml = desv.length
     ? desv.slice(0, 10).map((d) => `
-        <div class="history-item" style="cursor:default">
-          <span class="m" style="flex:1">${escapeHtml(d.c.nombre)} <span style="color:var(--muted-2);font-weight:400;font-size:.85rem">· ${etiquetaMes(d.mk)}</span></span>
-          <span class="v pct-bad">+${eur(d.exceso)}</span>
-          <span class="c" style="min-width:86px;text-align:right">${fmtPct(d.pct, { conSigno: false, decimales: 0 })} del límite</span>
+        <div class="dev-item">
+          <div class="dev-line1">
+            <span class="dev-name">${escapeHtml(d.c.nombre)}</span>
+            <span class="dev-amount">+${eur(d.exceso)}</span>
+          </div>
+          <div class="dev-meta">${fmtMes(d.mk)} · ${fmtPct(d.pct, { conSigno: false, decimales: 0 })} del límite</div>
         </div>`).join('')
     : `<div class="empty" style="padding:12px"><span class="big">✅</span>Ninguna etiqueta superó su límite en los meses con datos.</div>`;
 
@@ -1863,10 +1909,10 @@ function vistaCompartidos(view) {
       <h1>🤝 Compartidos</h1>
       <button class="btn secondary small" id="comp-back" type="button">← Gastos</button>
     </header>
-    <div class="stat-grid" style="margin-bottom:12px">
-      <div class="stat"><div class="label">Te deben</div><div class="value pct-good">${eur(bal.debido)}</div></div>
-      <div class="stat"><div class="label">Debes</div><div class="value pct-bad">${eur(bal.debo)}</div></div>
-      <div class="stat"><div class="label">Neto</div><div class="value ${bal.neto >= 0 ? 'pct-good' : 'pct-bad'}">${bal.neto >= 0 ? '+' : '−'}${eur(Math.abs(bal.neto))}</div></div>
+    <div class="summary-strip">
+      <div><div class="label">Te deben</div><div class="value pct-good">${eur(bal.debido)}</div></div>
+      <div><div class="label">Debes</div><div class="value pct-bad">${eur(bal.debo)}</div></div>
+      <div><div class="label">Neto</div><div class="value ${bal.neto >= 0 ? 'pct-good' : 'pct-bad'}">${bal.neto >= 0 ? '+' : '−'}${eur(Math.abs(bal.neto))}</div></div>
     </div>
     <button class="btn full" id="add-evento" type="button">+ Gasto compartido</button>
     <div style="display:flex;gap:10px;margin:10px 0 6px;flex-wrap:wrap">
@@ -1944,6 +1990,7 @@ function modalPersona() {
   const cerrar = () => overlay.remove();
   overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
   $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
   $('#per-cancel', overlay).onclick = cerrar;
   $('#per-save', overlay).onclick = () => {
     const nombre = $('#per-nombre', overlay).value.trim();
@@ -2019,6 +2066,7 @@ function modalEventoCompartido() {
   const cerrar = () => overlay.remove();
   overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
   $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
 
   const filas = () => [...overlay.querySelectorAll('[data-part]')];
   const idsMarcados = () => filas().filter((f) => $('.ev-chk', f).checked).map((f) => f.dataset.part);
@@ -2133,6 +2181,7 @@ function modalBizum() {
   const cerrar = () => overlay.remove();
   overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
   $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
   $('#bz-cancel', overlay).onclick = cerrar;
   $('#bz-save', overlay).onclick = () => {
     const personaId = $('#bz-persona', overlay).value;
@@ -2214,7 +2263,7 @@ function vistaAjustes(view) {
           <input id="pg-etf" type="text" inputmode="decimal" value="${String(pgRep.etf ?? 10).replace('.', ',')}" /></div>
         <div class="field"><label for="pg-via">% a viajes</label>
           <input id="pg-via" type="text" inputmode="decimal" value="${String(pgRep.viajes ?? 10).replace('.', ',')}" /></div>
-        <div class="field"><label>Resto → día a día</label>
+        <div class="field"><label for="pg-resto">Resto → día a día</label>
           <input id="pg-resto" type="text" disabled value="${Math.max(0, 100 - sumaPct)} %" /></div>
       </div>
       <p class="hint">Así se reparte cada paga. La app avisa en esos meses, la incluye al registrar las aportaciones y la suma a la previsión de la Casa. Ejemplo: 2 × 1.553,23 € en junio y diciembre → 80 % vivienda, 10 % ETF, 10 % viajes.</p>
@@ -2538,6 +2587,15 @@ function vistaAjustes(view) {
 /* ============ Arranque ============ */
 document.querySelectorAll('#tabs .tab').forEach((b) => b.addEventListener('click', () => irTab(b.dataset.tab)));
 
+// Accesibilidad: activar botones "role=button" con teclado
+document.addEventListener('keydown', (e) => {
+  const t = e.target;
+  if ((e.key === 'Enter' || e.key === ' ') && t && t.matches && t.matches('[role="button"][tabindex]')) {
+    e.preventDefault();
+    t.click();
+  }
+});
+
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredInstall = e;
@@ -2552,9 +2610,8 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   const h = location.hash.replace('#', '');
   if (['gastos', 'objetivo', 'inversion', 'patrimonio', 'compartidos', 'analisis', 'ajustes'].includes(h)) {
     ui.tab = h;
-    const activo = h === 'compartidos' ? 'gastos' : h;
-    document.querySelectorAll('#tabs .tab').forEach((b) => { b.classList.toggle('active', b.dataset.tab === activo); });
   }
+  marcarTabActiva(ui.tab);
   render();
   if (autoSyncActivo()) syncAhora();
 })();
