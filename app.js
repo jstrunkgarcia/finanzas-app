@@ -76,12 +76,20 @@ function seedState() {
     v: 2,
     ajustes: {
       ingreso: 1553.23,
+      pagas: {
+        activo: true,
+        numero: 2,          // 1 o 2 pagas al año
+        importe: 1553.23,   // importe neto por paga
+        mes1: 6,            // junio (o julio: cámbialo)
+        mes2: 12,           // diciembre
+        reparto: { vivienda: 80, etf: 10, viajes: 10 }, // % de cada paga; el resto va a día a día
+      },
       objetivoCasa: {
         precio: 300000,   // precio orientativo de la vivienda
         pctEntrada: 20,   // parte que paga el banco no
         pctGastos: 11,    // impuestos y gastos de compra (10–12 % según el informe)
         margen: 0,        // margen mensual que pasas al fondo (informe: hasta 223,23 €)
-        extraAnual: 2485.17, // 80 % de las dos pagas extra
+        extraAnual: 2485.17, // compatibilidad; ahora se calcula desde «pagas»
         fechaObjetivo: '2032-06',
       },
     },
@@ -139,6 +147,7 @@ function cargarEstado() {
       const s = JSON.parse(raw);
       if (s && Array.isArray(s.categorias)) {
         s.ajustes.objetivoCasa = s.ajustes.objetivoCasa || seedState().ajustes.objetivoCasa;
+        s.ajustes.pagas = s.ajustes.pagas || seedState().ajustes.pagas;
         s.eliminados = Array.isArray(s.eliminados) ? s.eliminados : [];
         for (const sn of s.snapshots || []) if (!sn.id) sn.id = sn.month;
         // Migración informe v3 (15-oct-2026): vivienda 750 €, presupuestos reales, nueva bolsa de viajes
@@ -194,6 +203,35 @@ function totalGastado(mk) {
 
 function presupuestoTotal() {
   return state.categorias.reduce((a, c) => a + (+c.presupuesto || 0), 0);
+}
+
+/* ============ Derivados: análisis multi-mes ============ */
+function analisisPeriodo(n) {
+  const meses = [];
+  for (let i = n - 1; i >= 0; i--) meses.push(addMonths(currentMonthKey(), -i));
+  return meses.map((mk) => {
+    const gastos = gastosDelMes(mk);
+    const porCat = { __none: 0 };
+    for (const c of state.categorias) porCat[c.id] = 0;
+    let total = 0;
+    for (const g of gastos) {
+      const id = state.categorias.some((c) => c.id === g.catId) ? g.catId : '__none';
+      porCat[id] = (porCat[id] || 0) + g.monto;
+      total += g.monto;
+    }
+    return { mk, porCat, total, n: gastos.length };
+  });
+}
+
+function mediana(nums) {
+  if (!nums.length) return 0;
+  const s = [...nums].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+function etiquetaMes(mk) {
+  return `${MESES_CORTOS[+mk.split('-')[1] - 1]} ${mk.slice(2, 4)}`;
 }
 
 /* ============ Derivados: inversión ============ */
@@ -281,6 +319,23 @@ function distribucionCubos() {
   }).filter((b) => b.total > 0 || true);
 }
 
+/* Saldos actuales agrupados por entidad y por función */
+function saldosActuales() {
+  const val = (hid) => statsHolding(hid).valorActual;
+  const sumCubos = (ids) => state.holdings.filter((h) => ids.includes(h.cubo)).reduce((a, h) => a + val(h.id), 0);
+  const diaadia = sumCubos(['diaadia']);
+  const colchon = sumCubos(['emergencia']);
+  const vivienda = sumCubos(['vivienda']);
+  const viajes = sumCubos(['viajes']);
+  const inversion = sumCubos(['jubilacion']);
+  const ahorro = vivienda + viajes;
+  const efectivoTR = colchon + ahorro;
+  const conocidos = ['diaadia', 'emergencia', 'vivienda', 'viajes', 'jubilacion'];
+  const otros = state.holdings.filter((h) => !conocidos.includes(h.cubo)).reduce((a, h) => a + val(h.id), 0);
+  const tr = efectivoTR + inversion + otros;
+  return { diaadia, colchon, vivienda, viajes, ahorro, inversion, efectivoTR, otros, tr, total: diaadia + tr };
+}
+
 /* ============ Objetivo: casa ============ */
 function addMonths(mk, n) {
   let [y, m] = mk.split('-').map(Number);
@@ -294,6 +349,77 @@ function monthsBetween(mkA, mkB) {
   const [y1, m1] = mkA.split('-').map(Number);
   const [y2, m2] = mkB.split('-').map(Number);
   return (y2 - y1) * 12 + (m2 - m1);
+}
+
+/* ============ Pagas extra ============ */
+function pagasConfig() {
+  return state.ajustes.pagas || { activo: false };
+}
+
+function mesesDePagas() {
+  const p = pagasConfig();
+  if (!p.activo) return [];
+  const numero = Math.min(Math.max(+p.numero || 2, 1), 2);
+  const m1 = +p.mes1 || 6;
+  return numero === 2 ? [m1, +p.mes2 || 12] : [m1];
+}
+
+function esMesDePaga(mk) {
+  return mesesDePagas().includes(+mk.split('-')[1]);
+}
+
+/* Reparto de una paga por cubos → posiciones concretas */
+function repartoPaga(monto) {
+  const p = pagasConfig();
+  if (!p.activo) return [];
+  const r = p.reparto || {};
+  let pct = {
+    vivienda: Math.max(0, +r.vivienda || 0),
+    jubilacion: Math.max(0, +r.etf || 0),
+    viajes: Math.max(0, +r.viajes || 0),
+  };
+  const suma = pct.vivienda + pct.jubilacion + pct.viajes;
+  if (suma > 100) {
+    const f = 100 / suma;
+    pct = { vivienda: pct.vivienda * f, jubilacion: pct.jubilacion * f, viajes: pct.viajes * f };
+  } else {
+    pct.diaadia = 100 - suma;
+  }
+  const out = [];
+  for (const [cubo, pctCubo] of Object.entries(pct)) {
+    if (pctCubo <= 0) continue;
+    const hs = state.holdings.filter((h) => h.cubo === cubo);
+    if (!hs.length) continue;
+    const importeCubo = (monto * pctCubo) / 100;
+    for (const h of hs) out.push({ hid: h.id, monto: Math.round((importeCubo / hs.length) * 100) / 100, cubo, pct: pctCubo });
+  }
+  return out;
+}
+
+function aplicarPaga(mk) {
+  const p = pagasConfig();
+  if (!p.activo) return toast('Las pagas extra están desactivadas', 'error');
+  const importe = +p.importe || 0;
+  if (importe <= 0) return toast('Configura el importe de la paga', 'error');
+  const snap = snapPorMes(mk);
+  if (!snap) return modalRegistrar(mk);
+  if (snap.pagaAplicada) return toast('La paga ya está aplicada a ese mes');
+  for (const r of repartoPaga(importe)) {
+    snap.valores[r.hid] = Math.round(((+snap.valores[r.hid] || 0) + r.monto) * 100) / 100;
+    snap.aportes[r.hid] = Math.round(((+snap.aportes[r.hid] || 0) + r.monto) * 100) / 100;
+  }
+  snap.pagaAplicada = true;
+  stamp(snap);
+  guardarEstado();
+  toast(`Paga extra aplicada a ${fmtMes(mk)}`);
+  render();
+}
+
+function extraAnualVivienda() {
+  const p = pagasConfig();
+  if (!p.activo) return 0;
+  const numero = Math.min(Math.max(+p.numero || 2, 1), 2);
+  return numero * (+p.importe || 0) * ((+((p.reparto || {}).vivienda) || 0) / 100);
 }
 
 function fondoViviendaActual() {
@@ -311,7 +437,7 @@ function datosVivienda() {
   const fondo = fondoViviendaActual();
   const planMes = state.holdings.filter((h) => h.cubo === 'vivienda').reduce((a, h) => a + (+h.plan || 0), 0);
   const margen = +o.margen || 0;
-  const extraAnual = +o.extraAnual || 0;
+  const extraAnual = extraAnualVivienda();
   const aporteMes = planMes + margen + extraAnual / 12;
   const faltan = Math.max(objetivo - fondo, 0);
   const meses = faltan > 0 && aporteMes > 0 ? faltan / aporteMes : null;
@@ -388,6 +514,7 @@ function render() {
   if (ui.tab === 'objetivo') return vistaObjetivo(view);
   if (ui.tab === 'inversion') return vistaInversion(view);
   if (ui.tab === 'patrimonio') return vistaPatrimonio(view);
+  if (ui.tab === 'analisis') return vistaAnalisis(view);
   if (ui.tab === 'ajustes') return vistaAjustes(view);
 }
 
@@ -417,6 +544,7 @@ function vistaGastos(view) {
   const presupuesto = presupuestoTotal();
   const pctGlobal = presupuesto > 0 ? total / presupuesto : null;
   const quedan = presupuesto - total;
+  const saldos = saldosActuales();
 
   const resumen = gastos.length ? gastos.reduce((a, g) => a + g.monto, 0) / gastos.length : 0;
 
@@ -474,6 +602,15 @@ function vistaGastos(view) {
 
   view.innerHTML = `
     ${cabecera('Gastos')}
+    <div class="row-split" style="margin:0 4px 8px">
+      <h2>Tu dinero ahora</h2>
+      <button class="btn secondary small" id="mini-ver" type="button" style="padding:5px 10px;font-size:0.75rem">Ver desglose ›</button>
+    </div>
+    <div class="stat-grid" style="margin-bottom:14px">
+      <div class="stat"><div class="label">Ibercaja</div><div class="value">${eur0(saldos.diaadia)}</div><div class="hint" style="margin-top:2px">día a día</div></div>
+      <div class="stat"><div class="label">Trade Republic · efectivo</div><div class="value">${eur0(saldos.efectivoTR)}</div><div class="hint" style="margin-top:2px">colchón ${eur0(saldos.colchon)} · ahorro ${eur0(saldos.ahorro)}</div></div>
+      <div class="stat"><div class="label">Trade Republic · inversión</div><div class="value">${eur0(saldos.inversion)}</div><div class="hint" style="margin-top:2px">ETF en cartera</div></div>
+    </div>
     <div class="card">
       <div class="card-title"><span>Presupuesto del mes</span><span class="${pctClass(pctGlobal)}" style="text-transform:none;font-size:1rem">${pctGlobal == null ? '' : fmtPct(pctGlobal, { conSigno: false })}</span></div>
       <div class="row-split"><span class="big-number">${eur(total)}</span><span class="sub-number">de ${eur(presupuesto, 0)}</span></div>
@@ -490,6 +627,8 @@ function vistaGastos(view) {
 
   cablearMesNav();
   $('#btn-add-gasto').onclick = () => modalGasto(null);
+  const miniVer = $('#mini-ver');
+  if (miniVer) miniVer.onclick = () => irTab('patrimonio');
   view.querySelectorAll('[data-edit]').forEach((el) => {
     el.onclick = () => modalGasto(el.dataset.edit);
   });
@@ -602,6 +741,17 @@ function vistaObjetivo(view) {
     } else if (mesesPara != null && mesesPara <= 24) {
       tips.push('Faltan menos de 24 meses para la fecha objetivo: según el informe, el efectivo de la entrada debería estar ya en seguro, sin bolsa.');
     }
+    // Efectivo total en Trade Republic = emergencia + vivienda + viajes (comparten cuenta)
+    const efectivoTR = state.holdings
+      .filter((h) => h.cubo === 'emergencia' || h.cubo === 'vivienda' || h.cubo === 'viajes')
+      .reduce((a, h) => a + statsHolding(h.id).valorActual, 0);
+    if (efectivoTR >= 80000) {
+      tips.push(`Regla 9 del informe: tienes ${eur0(efectivoTR)} de efectivo en Trade Republic y la garantía cubre 100.000 € por entidad — repártelo entre entidades para quedar por debajo.`);
+    } else if (efectivoTR >= 45000) {
+      tips.push(`Regla de los 45.000 € superada (${eur0(efectivoTR)} de efectivo en Trade Republic): el 3,04 % TAE solo cubre hasta 50.000 € y por encima baja. Abre MyInvestor y traslada el exceso del fondo vivienda a un fondo monetario en euros; la emergencia se queda en Trade Republic.`);
+    } else if (efectivoTR >= 40000) {
+      tips.push(`El efectivo de Trade Republic (${eur0(efectivoTR)}) se acerca a los 45.000 € de la regla del informe: cuando la cruces, abre MyInvestor y mueve el exceso del fondo vivienda a un fondo monetario (la emergencia se queda).`);
+    }
     if (!tips.length) return '';
     return `<div class="card" style="border-color:var(--gold)"><div class="card-title"><span>📌 Avisos del plan</span></div>${tips.map((t) => `<div class="sub-number" style="margin:6px 0">• ${t}</div>`).join('')}</div>`;
   })();
@@ -632,9 +782,8 @@ function vistaObjetivo(view) {
         <input id="ob-gastos" type="text" inputmode="decimal" value="${String(v.pctGastos).replace('.', ',')}" /></div>
       <div class="field"><label for="ob-margen">Margen mensual que pasas al fondo (€)</label>
         <input id="ob-margen" type="text" inputmode="decimal" value="${String(v.margen).replace('.', ',')}" /></div>
-      <div class="field"><label for="ob-extra">Extra anual al fondo (pagas extra, €)</label>
-        <input id="ob-extra" type="text" inputmode="decimal" value="${String(v.extraAnual | 0)}" /></div>
     </div>
+    <p class="hint">Pagas extra al fondo vivienda: <strong>${eur0(v.extraAnual)}/año</strong> (según Ajustes → Pagas extra; ya están incluidas en el ritmo).</p>
     <p class="hint">Según el informe: entrada = 20 % del precio (hipoteca del 80 %) más un 10–12 % de impuestos y gastos. Ejemplo del informe: vivienda de ${eur0(v.precio)} → efectivo orientativo ≈ ${eur0(v.precio * 0.2)} (entrada) + ${eur0(v.precio * 0.10)}–${eur0(v.precio * 0.12)} (gastos) = objetivo ≈ ${eur0(v.precio * 0.30)}–${eur0(v.precio * 0.32)}. La reserva de emergencia y el día a día <strong>no</strong> cuentan para la entrada.</p>
   `;
 
@@ -679,7 +828,6 @@ function vistaObjetivo(view) {
   guardarNum('#ob-entrada', 'pctEntrada', { max: 100 });
   guardarNum('#ob-gastos', 'pctGastos', { max: 100 });
   guardarNum('#ob-margen', 'margen');
-  guardarNum('#ob-extra', 'extraAnual');
   $('#ob-fecha').addEventListener('change', (e) => {
     state.ajustes.objetivoCasa.fechaObjetivo = e.target.value || null;
     state.ajustes.mod = Date.now();
@@ -710,6 +858,50 @@ function vistaInversion(view) {
           <button class="btn small secondary" id="btn-registrar" type="button">Registrar</button>
         </div>`
       : '';
+
+  // Paga extra del mes seleccionado
+  let bannerPaga = '';
+  const pg = pagasConfig();
+  const importePaga = +pg.importe || 0;  if (pg.activo && importePaga > 0 && esMesDePaga(ui.month)) {
+    const snapSel = snapPorMes(ui.month);
+    const porCubo = {};
+    for (const r of repartoPaga(importePaga)) porCubo[r.cubo] = (porCubo[r.cubo] || 0) + r.monto;
+    const detalle = Object.entries(porCubo)
+      .map(([cubo, monto]) => `${eur0(monto)} ${cuboPorId(cubo)?.nombre || cubo}`)
+      .join(' · ');
+    if (!snapSel) {
+      bannerPaga = `<div class="banner" style="border-color:var(--gold);background:linear-gradient(120deg,rgba(245,158,11,.16),rgba(16,185,129,.10))">
+        <span>🎁</span>
+        <div class="banner-text"><strong>Paga extra de ${fmtMes(ui.month).toLowerCase()}</strong>
+        ${eur(importePaga)} → ${detalle}. Al registrar las aportaciones se incluirá sola.</div>
+        <button class="btn small" id="btn-paga-reg" type="button">Registrar</button>
+      </div>`;
+    } else if (!snapSel.pagaAplicada) {
+      bannerPaga = `<div class="banner" style="border-color:var(--gold);background:linear-gradient(120deg,rgba(245,158,11,.16),rgba(16,185,129,.10))">
+        <span>🎁</span>
+        <div class="banner-text"><strong>Paga extra de ${fmtMes(ui.month).toLowerCase()}</strong>
+        ${eur(importePaga)} → ${detalle}. Aún no está sumada en este mes.</div>
+        <button class="btn small" id="btn-paga-aplicar" type="button">Aplicar paga</button>
+      </div>`;
+    } else {
+      bannerPaga = `<div class="banner" style="border-color:var(--border);background:var(--card)">
+        <span>✅</span>
+        <div class="banner-text"><strong>Paga extra aplicada</strong>
+        ${eur(importePaga)} repartidos este mes (${detalle}).</div>
+      </div>`;
+    }
+  }
+
+  const inversionActual = state.holdings
+    .filter((h) => h.cubo === 'jubilacion')
+    .reduce((a, h) => a + statsHolding(h.id).valorActual, 0);
+  const avisoInversion = inversionActual <= 0
+    ? `<div class="banner" style="border-color:var(--border);background:var(--card)">
+        <span>🌱</span>
+        <div class="banner-text"><strong>Aún sin inversión en cartera</strong>
+        Todo tu dinero está en cuentas. Cuando hagas tu primera compra del ETF, regístrala con «Registrar» y aparecerá aquí y en tu patrimonio.</div>
+      </div>`
+    : '';
 
   const holdings = state.holdings.map((h) => {
     const st = statsHolding(h.id);
@@ -753,6 +945,8 @@ function vistaInversion(view) {
   view.innerHTML = `
     ${cabecera('Inversión')}
     ${banner}
+    ${bannerPaga}
+    ${avisoInversion}
     <div class="card">
       <div class="card-title"><span>Patrimonio invertido</span>
         <span class="${stats.roi >= 0 ? 'pct-good' : 'pct-bad'}" style="font-size:1rem;text-transform:none">${fmtPct(stats.roi)}</span></div>
@@ -772,6 +966,10 @@ function vistaInversion(view) {
   cablearMesNav();
   const btn = $('#btn-registrar');
   if (btn) btn.onclick = () => modalRegistrar();
+  const btnPagaReg = $('#btn-paga-reg');
+  if (btnPagaReg) btnPagaReg.onclick = () => modalRegistrar(ui.month);
+  const btnPagaAplicar = $('#btn-paga-aplicar');
+  if (btnPagaAplicar) btnPagaAplicar.onclick = () => aplicarPaga(ui.month);
   view.querySelectorAll('[data-open]').forEach((el) => {
     el.onclick = () => {
       const hid = el.dataset.open;
@@ -794,10 +992,19 @@ function modalRegistrar(mk = null) {
     <div class="modal">
       <h3>${snap ? 'Editar' : 'Registrar'} valores · ${fmtMes(mes)}</h3>
       <p class="hint" style="margin-top:-6px">Introduce el <strong>valor de cada posición el día 1</strong> (antes de la aportación) y lo que inviertes ese día.</p>
+      ${!snap && pagasConfig().activo && esMesDePaga(mes) ? `<p class="hint" style="margin-top:-6px;color:var(--gold)">🎁 Este mes toca paga extra (${eur(+pagasConfig().importe || 0)}): las aportaciones vienen ya con su parte repartida.</p>` : ''}
       <div class="form-card" id="reg-fields">
         ${state.holdings.map((h) => {
           const v = snap && snap.valores[h.id] != null ? String(snap.valores[h.id]).replace('.', ',') : '';
-          const a = snap && snap.aportes[h.id] != null ? String(snap.aportes[h.id]).replace('.', ',') : '';
+          let a = snap && snap.aportes[h.id] != null ? String(snap.aportes[h.id]).replace('.', ',') : '';
+          const pg = pagasConfig();
+          if (!snap && pg.activo && esMesDePaga(mes) && (+pg.importe || 0) > 0) {
+            const extra = repartoPaga(+pg.importe)
+              .filter((r) => r.hid === h.id)
+              .reduce((x, r) => x + r.monto, 0);
+            const base = (+h.plan || 0) + extra;
+            if (base > 0) a = String(Math.round(base * 100) / 100).replace('.', ',');
+          }
           return `
           <div class="holding-card" style="margin-bottom:10px" data-hid="${h.id}">
             <div class="holding-head" style="margin-bottom:8px"><strong>${escapeHtml(h.nombre)}</strong></div>
@@ -835,7 +1042,12 @@ function modalRegistrar(mk = null) {
     if (vacio && !snap) return toast('No hay valores que guardar', 'error');
     const snapActual = snapPorMes(mes);
     if (snapActual) { snapActual.valores = valores; snapActual.aportes = aportes; stamp(snapActual); }
-    else state.snapshots.push(stamp({ id: mes, month: mes, valores, aportes }));
+    else {
+      const nuevo = stamp({ id: mes, month: mes, valores, aportes });
+      const pg = pagasConfig();
+      if (pg.activo && esMesDePaga(mes) && (+pg.importe || 0) > 0) nuevo.pagaAplicada = true;
+      state.snapshots.push(nuevo);
+    }
     guardarEstado(); cerrar(); toast(`Valores de ${fmtMes(mes)} guardados`); render();
   };
   if (snap) $('#reg-borrar', overlay).onclick = () => {
@@ -849,6 +1061,7 @@ function modalRegistrar(mk = null) {
 function vistaPatrimonio(view) {
   const stats = statsPatrimonio();
   const dist = distribucionCubos();
+  const saldos = saldosActuales();
   const COLOR_CUBO = { diaadia: '#64748b', emergencia: '#38bdf8', vivienda: '#f59e0b', viajes: '#8b5cf6', jubilacion: '#10b981' };
 
   const ingresos = +state.ajustes.ingreso || 0;
@@ -903,6 +1116,28 @@ function vistaPatrimonio(view) {
       ${stats.perfMes != null ? `<div class="sub-number">Última variación: <strong class="${stats.perfMes >= 0 ? 'pct-good' : 'pct-bad'}">${fmtPct(stats.perfMes)}</strong> (<span id="pat-ultimo-mes">${fmtMes(stats.ultimo.month)}</span>)</div>` : ''}
     </div>
 
+    <div class="card">
+      <div class="card-title"><span>Dónde está tu dinero</span>
+        <button class="btn secondary small" id="btn-saldos" type="button" style="padding:5px 10px;font-size:0.75rem">Actualizar saldos</button></div>
+      <div class="history-item" style="cursor:default">
+        <span class="m" style="flex:1">Ibercaja<span class="c" style="display:block">Día a día</span></span>
+        <span class="v">${eur(saldos.diaadia)}</span>
+      </div>
+      <div class="history-item" style="cursor:default">
+        <span class="m" style="flex:1">Trade Republic · efectivo<span class="c" style="display:block">Colchón ${eur0(saldos.colchon)} · Ahorro ${eur0(saldos.ahorro)}${saldos.viajes > 0 ? ` (viajes ${eur0(saldos.viajes)})` : ''}</span></span>
+        <span class="v">${eur(saldos.efectivoTR)}</span>
+      </div>
+      <div class="history-item" style="cursor:default">
+        <span class="m" style="flex:1">Trade Republic · inversión<span class="c" style="display:block">ETF en cartera</span></span>
+        <span class="v">${eur(saldos.inversion)}</span>
+      </div>
+      ${saldos.otros > 0.5 ? `<div class="history-item" style="cursor:default"><span class="m" style="flex:1">Otras posiciones</span><span class="v">${eur(saldos.otros)}</span></div>` : ''}
+      <div class="history-item" style="cursor:default;border-top:1px solid var(--border);margin-top:4px">
+        <span class="m" style="flex:1">Total</span>
+        <span class="v">${eur(saldos.total)}</span>
+      </div>
+    </div>
+
     ${serie.length > 1 ? `<div class="card"><div class="card-title"><span>Evolución</span></div><div class="chart-wrap">${chart}</div></div>` : ''}
 
     <h2 style="margin:4px 4px 10px">Cómo está repartido</h2>
@@ -919,6 +1154,9 @@ function vistaPatrimonio(view) {
     <h2 style="margin:18px 4px 10px">Mes a mes</h2>
     <table class="card table"><thead><tr><th>Mes</th><th>Variación</th><th>Aporte</th><th>Total</th></tr></thead><tbody>${tablaMeses}</tbody></table>
   `;
+
+  const btnSaldos = $('#btn-saldos');
+  if (btnSaldos) btnSaldos.onclick = () => modalRegistrar(currentMonthKey());
 }
 
 /* === BEGIN-FUSIONAR === */
@@ -1209,6 +1447,202 @@ function actualizarEstadoSync(extra = '') {
   el.textContent = extra || (ts ? `Lo más reciente en la nube: ${ts}` : 'Sin sincronizar todavía');
 }
 
+/* ============ Vista: Análisis ============ */
+function vistaAnalisis(view) {
+  const n = ui.analisisMeses || 6;
+  const filas = analisisPeriodo(n);
+  const conDatos = filas.filter((f) => f.n > 0);
+  const totalPeriodo = filas.reduce((a, f) => a + f.total, 0);
+  const media = conDatos.length ? totalPeriodo / conDatos.length : 0;
+  const presu = presupuestoTotal();
+  const pctMedia = presu > 0 ? media / presu : null;
+  const masCaro = conDatos.slice().sort((a, b) => b.total - a.total)[0];
+  const mesesPasados = conDatos.filter((f) => presu > 0 && f.total > presu).length;
+
+  // Categorías (incluye "sin etiqueta" si hay gastos sueltos)
+  const cats = state.categorias.map((c) => {
+    const serie = filas.map((f) => f.porCat[c.id] || 0);
+    const total = serie.reduce((a, b) => a + b, 0);
+    return { ...c, serie, total, media: conDatos.length ? total / conDatos.length : 0 };
+  });
+  const sinEtiqueta = filas.reduce((a, f) => a + (f.porCat.__none || 0), 0);
+  if (sinEtiqueta > 0) {
+    cats.push({ id: '__none', nombre: 'Sin etiqueta', color: '#64748b', presupuesto: 0, serie: filas.map((f) => f.porCat.__none || 0), total: sinEtiqueta, media: conDatos.length ? sinEtiqueta / conDatos.length : 0 });
+  }
+  cats.sort((a, b) => b.total - a.total);
+
+  const filasCats = cats.map((c) => {
+    if (c.total <= 0) return '';
+    const pct = c.presupuesto > 0 ? c.media / c.presupuesto : null;
+    const barra = c.presupuesto > 0
+      ? `<div class="progress ${pct > 1 ? 'over' : pct > 0.7 ? 'warn' : ''}"><span style="width:${Math.min(pct * 100, 100)}%"></span></div>`
+      : '';
+    return `
+      <div class="cat-row">
+        <span class="cat-name"><span class="dot" style="background:${c.color}"></span>${escapeHtml(c.nombre)}</span>
+        <span class="pct ${c.presupuesto > 0 ? pctClass(pct) : ''}">${c.presupuesto > 0 ? fmtPct(pct, { conSigno: false, decimales: 0 }) : ''}</span>
+        <span class="cat-amounts">media <strong>${eur(c.media)}</strong>${c.presupuesto > 0 ? ` de ${eur0(c.presupuesto)}` : ' · sin límite'}</span>
+        ${barra}
+      </div>`;
+  }).join('');
+
+  // Desviaciones: dónde y cuánto te pasaste
+  const desv = [];
+  for (const f of conDatos) {
+    for (const c of state.categorias) {
+      if (!(c.presupuesto > 0)) continue;
+      const g = f.porCat[c.id] || 0;
+      if (g > c.presupuesto + 0.005) desv.push({ mk: f.mk, c, exceso: g - c.presupuesto, pct: g / c.presupuesto });
+    }
+  }
+  desv.sort((a, b) => b.exceso - a.exceso);
+  const desvHtml = desv.length
+    ? desv.slice(0, 10).map((d) => `
+        <div class="history-item" style="cursor:default">
+          <span class="m" style="flex:1">${escapeHtml(d.c.nombre)} <span style="color:var(--muted-2);font-weight:400;font-size:.85rem">· ${etiquetaMes(d.mk)}</span></span>
+          <span class="v pct-bad">+${eur(d.exceso)}</span>
+          <span class="c" style="min-width:86px;text-align:right">${fmtPct(d.pct, { conSigno: false, decimales: 0 })} del límite</span>
+        </div>`).join('')
+    : `<div class="empty" style="padding:12px"><span class="big">✅</span>Ninguna etiqueta superó su límite en los meses con datos.</div>`;
+
+  // Tabla mes a mes
+  const tablaMeses = filas.slice().reverse().map((f) => {
+    const idx = filas.indexOf(f);
+    const prev = idx > 0 ? filas[idx - 1] : null;
+    const delta = prev && prev.n > 0 && f.n > 0 ? f.total - prev.total : null;
+    const pct = presu > 0 && f.n > 0 ? f.total / presu : null;
+    const estado = f.n === 0 ? '<span style="color:var(--muted-2)">sin datos</span>'
+      : pct == null ? '—'
+      : `<span class="${pct > 1 ? 'pct-bad' : pct > 0.7 ? 'pct-warn' : 'pct-good'}">${fmtPct(pct, { conSigno: false, decimales: 0 })}</span>`;
+    return `<tr>
+      <td>${etiquetaMes(f.mk)}</td>
+      <td>${f.n ? eur0(f.total) : '—'}</td>
+      <td>${estado}</td>
+      <td>${delta == null ? '—' : `<span class="${delta > 0 ? 'pct-bad' : 'pct-good'}">${delta > 0 ? '+' : '−'}${eur0(Math.abs(delta))}</span>`}</td>
+    </tr>`;
+  }).join('');
+
+  // Patrones (rachas, estacionalidad, holgura)
+  const patrones = [];
+  const estacionales = new Set();
+  if (conDatos.length >= 3) {
+    for (const c of cats) {
+      if (c.id === '__none') continue;
+      let streak = 0, maxStreak = 0;
+      for (const f of filas) {
+        const g = f.porCat[c.id] || 0;
+        if (c.presupuesto > 0 && g > c.presupuesto) { streak++; maxStreak = Math.max(maxStreak, streak); }
+        else streak = 0;
+      }
+      if (maxStreak >= 2) {
+        patrones.push(`<strong>${escapeHtml(c.nombre)}</strong>: ${maxStreak} meses seguidos por encima del límite.`);
+      }
+      const shares = conDatos.map((f) => (f.porCat[c.id] || 0) / (f.total || 1));
+      const med = mediana(shares);
+      if (c.total >= 40 && med < 0.6) {
+        const picos = conDatos
+          .map((f) => ({ f, g: f.porCat[c.id] || 0, share: (f.porCat[c.id] || 0) / (f.total || 1) }))
+          .filter((x) => x.g >= 15 && x.share > Math.max(med * 1.75, med + 0.1));
+        if (picos.length && picos.length <= 2) {
+          const top = picos.sort((a, b) => b.share - a.share)[0];
+          estacionales.add(c.id);
+          patrones.push(`<strong>${escapeHtml(c.nombre)}</strong>: en ${fmtMes(top.f.mk).toLowerCase()} fue el <strong>${(top.share * 100).toFixed(0)} %</strong> de tu gasto (media del periodo: ${med < 0.005 ? '<1' : (med * 100).toFixed(0)} %).`);
+        }
+      }
+      if (c.presupuesto > 0 && c.media > 0 && c.media < c.presupuesto * 0.55 && c.presupuesto - c.media >= 20) {
+        patrones.push(`<strong>${escapeHtml(c.nombre)}</strong>: tu media (${eur0(c.media)}) está muy por debajo del límite (${eur0(c.presupuesto)}); podrías ajustarlo y liberar <strong>${eur0(c.presupuesto - c.media)}/mes</strong>.`);
+      }
+    }
+  }
+  const patronesHtml = patrones.length
+    ? patrones.slice(0, 6).map((t) => `<div class="sub-number" style="margin:8px 0">• ${t}</div>`).join('')
+    : `<div class="hint" style="margin-top:0">Necesitas al menos 3 meses con gastos para detectar patrones (rachas, estacionalidad, holguras).</div>`;
+
+  // Plan sugerido (reglas a partir de tus datos)
+  const plan = [];
+  if (!conDatos.length) {
+    plan.push('Añade gastos durante 2–3 meses y aquí aparecerá un plan personalizado: recortes concretos y a dónde mandar lo ahorrado.');
+  } else {
+    const excesos = state.categorias.map((c) => {
+      if (!(c.presupuesto > 0) || estacionales.has(c.id)) return null;
+      const avg = conDatos.reduce((a, f) => a + Math.max((f.porCat[c.id] || 0) - c.presupuesto, 0), 0) / conDatos.length;
+      return { c, avg };
+    }).filter((x) => x && x.avg >= 2).sort((a, b) => b.avg - a.avg);
+
+    if (excesos.length) {
+      const ahorroMes = excesos.reduce((a, x) => a + x.avg, 0);
+      const lista = excesos.slice(0, 3).map((x) => `${escapeHtml(x.c.nombre)} (~${eur0(x.avg)}/mes)`).join(', ');
+      plan.push(`Para cumplir tus límites, recorta de media <strong>${eur0(ahorroMes)}/mes</strong>: ${lista}.`);
+      const v = datosVivienda();
+      const mesesGanados = v.aporteMes > 0 && v.faltan > 0 ? v.faltan / v.aporteMes - v.faltan / (v.aporteMes + ahorroMes) : 0;
+      if (mesesGanados >= 0.5) {
+        const m = Math.round(mesesGanados);
+        plan.push(`Si ese recorte (${eur0(ahorroMes * 12)}/año) va al fondo vivienda, adelantas la entrada unos <strong>${m} ${m === 1 ? 'mes' : 'meses'}</strong>.`);
+      } else {
+        plan.push(`Ese recorte supone <strong>${eur0(ahorroMes * 12)}/año</strong>: puedes destinarlo al fondo vivienda o a ahorro a largo plazo.`);
+      }
+    } else {
+      plan.push('Vas dentro de todos tus límites en los meses con datos. Próximo paso: formaliza el ahorro que te sobra — el margen sin asignar puede ir al fondo vivienda cada mes.');
+    }
+
+    const holgura = state.categorias.map((c) => {
+      if (!(c.presupuesto > 0)) return null;
+      const total = conDatos.reduce((a, f) => a + (f.porCat[c.id] || 0), 0);
+      const mesesConGasto = conDatos.filter((f) => (f.porCat[c.id] || 0) > 0).length;
+      const m = total / conDatos.length;
+      if (mesesConGasto < 2 || m >= c.presupuesto * 0.55) return null;
+      return { c, m };
+    }).filter((x) => x && x.c.presupuesto - x.m >= 25).sort((a, b) => (b.c.presupuesto - b.m) - (a.c.presupuesto - a.m))[0];
+    if (holgura) {
+      plan.push(`Tienes holgura en <strong>${escapeHtml(holgura.c.nombre)}</strong> (media ${eur0(holgura.m)} de ${eur0(holgura.c.presupuesto)}): si bajas su límite, los <strong>${eur0(holgura.c.presupuesto - holgura.m)}/mes</strong> liberados pueden ir directos a ahorro.`);
+    }
+
+    const viajes = cats.find((c) => c.id === 'c-viajes');
+    if (viajes && viajes.total > 0) {
+      const mesesSinVia = conDatos.filter((f) => (f.porCat['c-viajes'] || 0) === 0).length;
+      const maxVia = Math.max(...conDatos.map((f) => f.porCat['c-viajes'] || 0), 0);
+      if (mesesSinVia > 0 && maxVia >= Math.max(viajes.media, 1) * 1.5) {
+        plan.push('Viajes es estacional: en los meses que viajas concentras el gasto. Usa la posición <strong>«Viajes y regalos»</strong> como bolsa (50 €/mes del plan) y tira de ella solo esos meses, sin tocar la vivienda.');
+      }
+    }
+  }
+
+  view.innerHTML = `
+    ${cabecera('Análisis', false)}
+    <div class="chips" style="margin:0 0 14px">
+      ${[3, 6, 12].map((m) => `<button class="chip ${n === m ? 'selected' : ''}" data-periodo="${m}" type="button">${m} meses</button>`).join('')}
+    </div>
+    <div class="stat-grid" style="margin-bottom:12px">
+      <div class="stat"><div class="label">Gastado en ${n} meses</div><div class="value">${eur0(totalPeriodo)}</div><div class="hint" style="margin-top:2px">${conDatos.length} de ${n} meses con datos</div></div>
+      <div class="stat"><div class="label">Media mensual</div><div class="value">${eur0(media)}</div><div class="hint ${pctClass(pctMedia)}" style="margin-top:2px">${pctMedia != null ? fmtPct(pctMedia, { conSigno: false, decimales: 0 }) + ' del límite' : ''}</div></div>
+      <div class="stat"><div class="label">Mes más caro</div><div class="value">${masCaro ? eur0(masCaro.total) : '—'}</div><div class="hint" style="margin-top:2px">${masCaro ? fmtMes(masCaro.mk) : 'sin datos'}</div></div>
+      <div class="stat"><div class="label">Meses por encima</div><div class="value ${mesesPasados ? 'pct-bad' : 'pct-good'}">${mesesPasados}</div><div class="hint" style="margin-top:2px">de ${conDatos.length} con datos</div></div>
+    </div>
+
+    <h2 style="margin:4px 4px 10px">Dónde te pasaste</h2>
+    <div class="card" style="padding-top:4px;padding-bottom:4px">${desvHtml}</div>
+
+    <h2 style="margin:18px 4px 10px">Dónde se va (media mensual)</h2>
+    <div class="cat-list">${filasCats || '<div class="empty">Sin gastos en el periodo.</div>'}</div>
+
+    <h2 style="margin:18px 4px 10px">Comparativa mensual</h2>
+    <table class="card table"><thead><tr><th>Mes</th><th>Gasto</th><th>% límite</th><th>vs. anterior</th></tr></thead><tbody>${tablaMeses}</tbody></table>
+
+    <h2 style="margin:18px 4px 10px">Patrones que veo</h2>
+    <div class="card">${patronesHtml}</div>
+
+    <h2 style="margin:18px 4px 10px">Plan sugerido</h2>
+    <div class="card" style="border-color:var(--accent)">
+      ${plan.map((t) => `<div class="sub-number" style="margin:6px 0">• ${t}</div>`).join('')}
+    </div>
+    <p class="hint">Sugerencias calculadas con tus propios límites y gastos; no son asesoramiento financiero.</p>
+  `;
+
+  view.querySelectorAll('[data-periodo]').forEach((b) => {
+    b.onclick = () => { ui.analisisMeses = +b.dataset.periodo; render(); };
+  });
+}
+
 /* ============ Vista: Ajustes ============ */
 function vistaAjustes(view) {
   const presupuesto = state.categorias.map((c, i) => `
@@ -1235,6 +1669,11 @@ function vistaAjustes(view) {
       <input type="text" class="w-budget" inputmode="decimal" data-obj="${cb.id}" value="${String(cb.objetivo || 0).replace('.', ',')}" aria-label="Porcentaje objetivo" /> %
     </div>`).join('');
 
+  const pg = state.ajustes.pagas || {};
+  const pgRep = pg.reparto || {};
+  const mesOpt = (sel) => MESES.map((m, i) => `<option value="${i + 1}" ${+sel === i + 1 ? 'selected' : ''}>${m.charAt(0).toUpperCase() + m.slice(1)}</option>`).join('');
+  const sumaPct = (+pgRep.vivienda || 0) + (+pgRep.etf || 0) + (+pgRep.viajes || 0);
+
   view.innerHTML = `
     ${cabecera('Ajustes', false)}
 
@@ -1243,6 +1682,38 @@ function vistaAjustes(view) {
       <div class="field"><label for="aj-ingreso">Ingreso neto mensual (€)</label>
         <input id="aj-ingreso" type="text" inputmode="decimal" value="${String(state.ajustes.ingreso || 0).replace('.', ',')}" /></div>
       <p class="hint">Se usa para el indicador de ahorro del mes en «Patrimonio».</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>Pagas extra</span>
+        <label style="display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:0.78rem;color:var(--muted);font-weight:600">
+          <input type="checkbox" id="pg-activo" style="width:auto" ${pg.activo !== false ? 'checked' : ''} /> activas
+        </label>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="pg-importe">Importe neto por paga (€)</label>
+          <input id="pg-importe" type="text" inputmode="decimal" value="${String(pg.importe ?? 1553.23).replace('.', ',')}" /></div>
+        <div class="field"><label for="pg-numero">Pagas al año</label>
+          <select id="pg-numero">
+            <option value="2" ${(+pg.numero || 2) === 2 ? 'selected' : ''}>2 (doble paga)</option>
+            <option value="1" ${+pg.numero === 1 ? 'selected' : ''}>1</option>
+          </select></div>
+        <div class="field"><label for="pg-mes1">Paga 1 (mes)</label>
+          <select id="pg-mes1">${mesOpt(pg.mes1 ?? 6)}</select></div>
+        <div class="field"><label for="pg-mes2">Paga 2 (mes)</label>
+          <select id="pg-mes2" ${+pg.numero === 1 ? 'disabled' : ''}>${mesOpt(pg.mes2 ?? 12)}</select></div>
+      </div>
+      <div class="field-row" style="margin-top:12px">
+        <div class="field"><label for="pg-viv">% al fondo vivienda</label>
+          <input id="pg-viv" type="text" inputmode="decimal" value="${String(pgRep.vivienda ?? 80).replace('.', ',')}" /></div>
+        <div class="field"><label for="pg-etf">% al ETF</label>
+          <input id="pg-etf" type="text" inputmode="decimal" value="${String(pgRep.etf ?? 10).replace('.', ',')}" /></div>
+        <div class="field"><label for="pg-via">% a viajes</label>
+          <input id="pg-via" type="text" inputmode="decimal" value="${String(pgRep.viajes ?? 10).replace('.', ',')}" /></div>
+        <div class="field"><label>Resto → día a día</label>
+          <input id="pg-resto" type="text" disabled value="${Math.max(0, 100 - sumaPct)} %" /></div>
+      </div>
+      <p class="hint">Así se reparte cada paga. La app avisa en esos meses, la incluye al registrar las aportaciones y la suma a la previsión de la Casa. Ejemplo: 2 × 1.553,23 € en junio y diciembre → 80 % vivienda, 10 % ETF, 10 % viajes.</p>
     </div>
 
     <div class="card">
@@ -1322,6 +1793,49 @@ function vistaAjustes(view) {
     state.ajustes.ingreso = v ?? 0;
     state.ajustes.mod = Date.now();
     guardarEstado(); toast('Ingreso actualizado');
+  });
+
+  // Pagas extra
+  const pgActual = () => {
+    if (!state.ajustes.pagas) state.ajustes.pagas = seedState().ajustes.pagas;
+    return state.ajustes.pagas;
+  };
+  const pgRefrescar = () => {
+    const p = pgActual();
+    const r = p.reparto || {};
+    const suma = (+r.vivienda || 0) + (+r.etf || 0) + (+r.viajes || 0);
+    const resto = $('#pg-resto');
+    if (resto) resto.value = `${Math.max(0, 100 - suma)} %`;
+    const m2 = $('#pg-mes2');
+    if (m2) m2.disabled = +p.numero === 1;
+  };
+  $('#pg-activo').addEventListener('change', (e) => {
+    pgActual().activo = e.target.checked;
+    guardarEstado(); toast(e.target.checked ? 'Pagas extra activadas' : 'Pagas extra desactivadas'); render();
+  });
+  $('#pg-importe').addEventListener('change', (e) => {
+    pgActual().importe = parseAmount(e.target.value) ?? 0;
+    guardarEstado(); toast('Importe de paga guardado');
+  });
+  $('#pg-numero').addEventListener('change', (e) => {
+    pgActual().numero = +e.target.value === 1 ? 1 : 2;
+    guardarEstado(); pgRefrescar();
+  });
+  $('#pg-mes1').addEventListener('change', (e) => {
+    pgActual().mes1 = +e.target.value || 6;
+    guardarEstado();
+  });
+  $('#pg-mes2').addEventListener('change', (e) => {
+    pgActual().mes2 = +e.target.value || 12;
+    guardarEstado();
+  });
+  [['#pg-viv', 'vivienda'], ['#pg-etf', 'etf'], ['#pg-via', 'viajes']].forEach(([sel, clave]) => {
+    $(sel).addEventListener('change', (e) => {
+      const p = pgActual();
+      p.reparto = p.reparto || {};
+      p.reparto[clave] = Math.min(Math.max(parseAmount(e.target.value) ?? 0, 0), 100);
+      guardarEstado(); pgRefrescar();
+    });
   });
 
   // Categorías
@@ -1494,7 +2008,7 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 
 (() => {
   const h = location.hash.replace('#', '');
-  if (['gastos', 'objetivo', 'inversion', 'patrimonio', 'ajustes'].includes(h)) {
+  if (['gastos', 'objetivo', 'inversion', 'patrimonio', 'analisis', 'ajustes'].includes(h)) {
     ui.tab = h;
     document.querySelectorAll('#tabs .tab').forEach((b) => { b.classList.toggle('active', b.dataset.tab === h); });
   }
