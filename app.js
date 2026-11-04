@@ -3,6 +3,7 @@
 
 /* ============ Utilidades ============ */
 const $ = (sel, root = document) => root.querySelector(sel);
+const APP_VERSION = 'versión 15 · 4 nov 2026';
 const uid = () =>
   (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now().toString(36) + Math.random().toString(36).slice(2));
 
@@ -149,6 +150,9 @@ function cargarEstado() {
         s.ajustes.objetivoCasa = s.ajustes.objetivoCasa || seedState().ajustes.objetivoCasa;
         s.ajustes.pagas = s.ajustes.pagas || seedState().ajustes.pagas;
         s.eliminados = Array.isArray(s.eliminados) ? s.eliminados : [];
+        if (s.ajustes.github && s.ajustes.github.repo) {
+          s.ajustes.github.repo = normalizarRepo(s.ajustes.github.repo);
+        }
         for (const sn of s.snapshots || []) if (!sn.id) sn.id = sn.month;
         // Migración informe v3 (15-oct-2026): vivienda 750 €, presupuestos reales, nueva bolsa de viajes
         if (!s.cubos.some((c) => c.id === 'viajes')) s.cubos.push({ id: 'viajes', nombre: 'Viajes y regalos', objetivo: 0 });
@@ -1258,8 +1262,19 @@ function ghModoActivo() {
   return !!(gh && gh.repo && gh.token);
 }
 
+/* Acepta «usuario/repo», URLs completas de GitHub, etc. */
+function normalizarRepo(v) {
+  let s = String(v || '').trim();
+  s = s.replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+  s = s.replace(/^github\.com\//i, '');
+  s = s.split(/[?#]/)[0].replace(/\/+$/, '').replace(/\.git$/i, '');
+  const partes = s.split('/').filter(Boolean);
+  if (partes.length >= 2) return `${partes[0]}/${partes[1]}`;
+  return partes[0] || '';
+}
+
 function ghUrl(cfg) {
-  return `https://api.github.com/repos/${cfg.repo}/contents/${encodeURIComponent(cfg.ruta || 'finanzas.json')}`;
+  return `https://api.github.com/repos/${normalizarRepo(cfg.repo)}/contents/${encodeURIComponent(cfg.ruta || 'finanzas.json')}`;
 }
 
 function ghCabeceras(cfg, extra = {}) {
@@ -1757,8 +1772,9 @@ function vistaAjustes(view) {
     <div class="card" style="border-color:var(--accent)">
       <div class="card-title"><span>☁️ Nube gratis (GitHub · recomendado)</span></div>
       <p class="hint" style="margin-top:-4px;margin-bottom:10px">Tus datos van a un <strong>repo privado</strong> de GitHub (JSON invisible a todos + historial de cambios como commits). Funciona desde cualquier lugar, sin PC encendido. Publica la app en Pages con <strong>publicar_github.sh</strong>.</p>
-      <div class="field"><label for="gh-repo">Repo de DATOS (usuario/repo, privado)</label>
-        <input id="gh-repo" type="text" placeholder="tucuenta/finanzas-datos" value="${escapeHtml((state.ajustes.github || {}).repo || '')}" /></div>
+      <div class="field"><label for="gh-repo">Repo de DATOS (usuario/repo, privado — NO el de la app)</label>
+        <input id="gh-repo" type="text" placeholder="jstrunkgarcia/finanzas-datos" value="${escapeHtml((state.ajustes.github || {}).repo || '')}" />
+        <p class="hint" style="margin-top:6px">El de datos es el <strong>privado</strong> (contiene <code>finanzas.json</code>). El repo público <code>finanzas-app</code> es solo el código de la web: no lo pongas aquí. Puedes pegar la URL completa y se corrige sola.</p></div>
       <div class="field"><label for="gh-token">Token de acceso (fine-grained: solo ese repo, permiso «Contents: Read and write»)</label>
         <input id="gh-token" type="password" placeholder="github_pat_…" value="${escapeHtml((state.ajustes.github || {}).token || '')}" /></div>
       <div class="field"><label for="gh-ruta">Archivo de datos</label>
@@ -1804,7 +1820,7 @@ function vistaAjustes(view) {
       <strong>Ordenador:</strong> en Chrome, icono de instalación en la barra de direcciones.</p>
     </div>
 
-    <p class="hint" style="text-align:center;margin-top:20px">Finanzas Personal · los datos nunca salen de tu dispositivo</p>
+    <p class="hint" style="text-align:center;margin-top:20px">Finanzas Personal · ${APP_VERSION} · los datos nunca salen de tu dispositivo</p>
   `;
 
   // Ingreso
@@ -1995,7 +2011,15 @@ function vistaAjustes(view) {
   const ghCampo = (id, clave, esUltimo = false) => {
     const guardar = () => {
       const g = { ...(state.ajustes.github || {}) };
-      g[clave] = $(id).value.trim();
+      let valor = $(id).value.trim();
+      if (clave === 'repo' && valor) {
+        valor = normalizarRepo(valor);
+        $(id).value = valor;
+        if (/^[^/]+\/finanzas-app$/i.test(valor)) {
+          toast('Ese es el repo de la APP (público). El de DATOS es el privado; usa jstrunkgarcia/finanzas-datos', 'error');
+        }
+      }
+      g[clave] = valor;
       state.ajustes.github = (g.repo || g.token || g.ruta) ? g : null;
       state.ajustes.mod = Date.now();
       guardarEstado(state, true);
