@@ -3,7 +3,7 @@
 
 /* ============ Utilidades ============ */
 const $ = (sel, root = document) => root.querySelector(sel);
-const APP_VERSION = 'versión 16 · 4 nov 2026';
+const APP_VERSION = 'versión 19 · 4 nov 2026';
 const uid = () =>
   (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now().toString(36) + Math.random().toString(36).slice(2));
 
@@ -122,6 +122,9 @@ function seedState() {
     snapshots: [
       { id: mk, month: mk, inicial: true, valores: { 'h-ibercaja': 1500, 'h-emergencia': 4500, 'h-vivienda': 3000, 'h-viajes': 0, 'h-etf': 1000 }, aportes: { 'h-ibercaja': 0, 'h-emergencia': 0, 'h-vivienda': 0, 'h-viajes': 0, 'h-etf': 0 } },
     ],
+    personas: [],
+    compartidosEventos: [],
+    bizums: [],
     eliminados: [],
   };
 }
@@ -150,6 +153,9 @@ function cargarEstado() {
         s.ajustes.objetivoCasa = s.ajustes.objetivoCasa || seedState().ajustes.objetivoCasa;
         s.ajustes.pagas = s.ajustes.pagas || seedState().ajustes.pagas;
         s.eliminados = Array.isArray(s.eliminados) ? s.eliminados : [];
+        s.personas = Array.isArray(s.personas) ? s.personas : [];
+        s.compartidosEventos = Array.isArray(s.compartidosEventos) ? s.compartidosEventos : [];
+        s.bizums = Array.isArray(s.bizums) ? s.bizums : [];
         if (s.ajustes.github && s.ajustes.github.repo) {
           s.ajustes.github.repo = normalizarRepo(s.ajustes.github.repo);
         }
@@ -207,6 +213,58 @@ function totalGastado(mk) {
 
 function presupuestoTotal() {
   return state.categorias.reduce((a, c) => a + (+c.presupuesto || 0), 0);
+}
+
+/* ============ Derivados: gastos compartidos / Bizum ============ */
+function personasLista() { return state.personas || []; }
+
+function nombreParticipante(id) {
+  if (id === 'yo') return 'Yo';
+  const p = personasLista().find((x) => x.id === id);
+  return p ? p.nombre : '—';
+}
+
+function balancesCompartidos() {
+  const saldo = {};
+  for (const p of personasLista()) saldo[p.id] = 0;
+  for (const ev of state.compartidosEventos || []) {
+    const pagador = ev.pagador;
+    const miParte = (ev.participantes || []).find((x) => x.id === 'yo');
+    for (const part of ev.participantes || []) {
+      if (part.id === 'yo') continue;
+      if (!(part.id in saldo)) saldo[part.id] = 0;
+      if (pagador === 'yo') saldo[part.id] += +part.importe || 0;
+      else if (pagador === part.id && miParte) saldo[part.id] -= +miParte.importe || 0;
+    }
+  }
+  for (const b of state.bizums || []) {
+    if (!(b.personaId in saldo)) saldo[b.personaId] = 0;
+    saldo[b.personaId] -= +b.importe || 0; // + = me paga (reduce deuda), − = le pago
+  }
+  let debido = 0, debo = 0;
+  for (const k of Object.keys(saldo)) {
+    saldo[k] = Math.round(saldo[k] * 100) / 100;
+    if (saldo[k] > 0) debido += saldo[k];
+    else debo += -saldo[k];
+  }
+  return {
+    saldo,
+    debido: Math.round(debido * 100) / 100,
+    debo: Math.round(debo * 100) / 100,
+    neto: Math.round((debido - debo) * 100) / 100,
+  };
+}
+
+function repartirIgual(total, ids) {
+  if (!ids.length) return {};
+  const base = Math.floor((total / ids.length) * 100) / 100;
+  const out = {};
+  let acumulado = 0;
+  ids.forEach((id, i) => {
+    out[id] = i === ids.length - 1 ? Math.round((total - acumulado) * 100) / 100 : base;
+    acumulado += out[id];
+  });
+  return out;
 }
 
 /* ============ Derivados: análisis multi-mes ============ */
@@ -507,7 +565,8 @@ function sparkDatos(valores, { w = 96, h = 30 } = {}) {
 function irTab(tab) {
   ui.tab = tab;
   try { history.replaceState(null, '', '#' + tab); } catch (e) {}
-  document.querySelectorAll('#tabs .tab').forEach((b) => { b.classList.toggle('active', b.dataset.tab === tab); });
+  const activo = tab === 'compartidos' ? 'gastos' : tab;
+  document.querySelectorAll('#tabs .tab').forEach((b) => { b.classList.toggle('active', b.dataset.tab === activo); });
   render();
   window.scrollTo({ top: 0 });
 }
@@ -518,6 +577,7 @@ function render() {
   if (ui.tab === 'objetivo') return vistaObjetivo(view);
   if (ui.tab === 'inversion') return vistaInversion(view);
   if (ui.tab === 'patrimonio') return vistaPatrimonio(view);
+  if (ui.tab === 'compartidos') return vistaCompartidos(view);
   if (ui.tab === 'analisis') return vistaAnalisis(view);
   if (ui.tab === 'ajustes') return vistaAjustes(view);
 }
@@ -549,6 +609,10 @@ function vistaGastos(view) {
   const pctGlobal = presupuesto > 0 ? total / presupuesto : null;
   const quedan = presupuesto - total;
   const saldos = saldosActuales();
+  const comp = balancesCompartidos();
+  const resumenComp = (comp.debido > 0.004 || comp.debo > 0.004)
+    ? `${comp.debido > 0.004 ? `te deben ${eur(comp.debido)}` : ''}${comp.debido > 0.004 && comp.debo > 0.004 ? ' · ' : ''}${comp.debo > 0.004 ? `debes ${eur(comp.debo)}` : ''}`
+    : 'Controla cenas, regalos y bizums: quién te debe y cuánto';
 
   const resumen = gastos.length ? gastos.reduce((a, g) => a + g.monto, 0) / gastos.length : 0;
 
@@ -615,6 +679,15 @@ function vistaGastos(view) {
       <div class="stat"><div class="label">Trade Republic · efectivo</div><div class="value">${eur0(saldos.efectivoTR)}</div><div class="hint" style="margin-top:2px">colchón ${eur0(saldos.colchon)} · ahorro ${eur0(saldos.ahorro)}</div></div>
       <div class="stat"><div class="label">Trade Republic · inversión</div><div class="value">${eur0(saldos.inversion)}</div><div class="hint" style="margin-top:2px">ETF en cartera</div></div>
     </div>
+    <div class="card" style="padding:12px 14px;margin-bottom:12px">
+      <div class="row-split">
+        <div>
+          <strong>🤝 Compartidos y Bizum</strong>
+          <div class="hint" style="margin-top:2px">${resumenComp}</div>
+        </div>
+        <button class="btn secondary small" id="btn-comp" type="button">Abrir</button>
+      </div>
+    </div>
     <div class="card">
       <div class="card-title"><span>Presupuesto del mes</span><span class="${pctClass(pctGlobal)}" style="text-transform:none;font-size:1rem">${pctGlobal == null ? '' : fmtPct(pctGlobal, { conSigno: false })}</span></div>
       <div class="row-split"><span class="big-number">${eur(total)}</span><span class="sub-number">de ${eur(presupuesto, 0)}</span></div>
@@ -633,6 +706,8 @@ function vistaGastos(view) {
   $('#btn-add-gasto').onclick = () => modalGasto(null);
   const miniVer = $('#mini-ver');
   if (miniVer) miniVer.onclick = () => irTab('patrimonio');
+  const btnComp = $('#btn-comp');
+  if (btnComp) btnComp.onclick = () => irTab('compartidos');
   view.querySelectorAll('[data-edit]').forEach((el) => {
     el.onclick = () => modalGasto(el.dataset.edit);
   });
@@ -725,6 +800,23 @@ async function buscarActualizacion() {
     }
   } catch (e) { /* recarga igualmente */ }
   location.replace(location.pathname + '?v=' + Date.now());
+}
+
+/* Compara la versión instalada con la publicada en Pages */
+async function comprobarVersionPublicada() {
+  const el = $('#version-info');
+  if (!el) return;
+  try {
+    const res = await fetch('./app.js?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('status');
+    const txt = await res.text();
+    const m = txt.match(/APP_VERSION = '([^']+)'/);
+    const remota = m ? m[1] : 'desconocida';
+    const igual = remota === APP_VERSION;
+    el.innerHTML = `Instalada aquí: <strong>${APP_VERSION}</strong><br>Publicada en GitHub: <strong>${remota}</strong> ${igual ? '✅' : '— pulsa «Buscar actualización» cuando esté publicada'}`;
+  } catch (e) {
+    el.textContent = `Instalada aquí: ${APP_VERSION} · no se pudo comprobar la publicada`;
+  }
 }
 
 /* ============ Vista: Objetivo Casa ============ */
@@ -1181,7 +1273,7 @@ function vistaPatrimonio(view) {
 }
 
 /* === BEGIN-FUSIONAR === */
-const COLECCIONES = ['gastos', 'snapshots', 'categorias', 'holdings', 'cubos'];
+const COLECCIONES = ['gastos', 'snapshots', 'categorias', 'holdings', 'cubos', 'personas', 'compartidosEventos', 'bizums'];
 
 /* Misma regla que el servidor casero: registro a registro gana el 'mod' más
    reciente; los borrados viajan como lápidas. Se usa con la nube de GitHub
@@ -1374,6 +1466,34 @@ async function syncGitHub(forzar = false) {
     const msg = GH_ERRORES[e && e.status] || 'No se pudo conectar con GitHub (¿internet?)';
     actualizarEstadoSync('⚠️ ' + msg);
     if (forzar) toast(msg, 'error');
+  }
+}
+
+/* Diagnóstico: qué usuario y repos ve el token */
+async function ghDiagnostico() {
+  const cfg = state.ajustes.github || {};
+  const el = $('#sync-estado');
+  const set = (t) => { if (el) el.textContent = t; };
+  if (!cfg.token) return toast('Añade primero el token', 'error');
+  const cab = { Authorization: `Bearer ${cfg.token}`, Accept: 'application/vnd.github+json' };
+  try {
+    const ru = await fetch('https://api.github.com/user', { headers: cab, cache: 'no-store' });
+    if (!ru.ok) throw Object.assign(new Error('token'), { status: ru.status });
+    const u = await ru.json();
+    let repos = [];
+    const rr = await fetch('https://api.github.com/user/repos?per_page=100&affiliation=owner,collaborator,organization_member', { headers: cab, cache: 'no-store' });
+    if (rr.ok) {
+      const l = await rr.json();
+      if (Array.isArray(l)) repos = l.map((r) => r.full_name);
+    }
+    const objetivo = normalizarRepo(cfg.repo || '');
+    const acceso = repos.some((n) => n.toLowerCase() === objetivo.toLowerCase());
+    set(`🔍 Token de ${u.login}. Repos visibles: ${repos.length ? repos.join(', ') : 'ninguno'}. Acceso a ${objetivo || '(sin repo)'}: ${acceso ? 'SÍ ✅' : 'NO ❌'}`);
+    toast(acceso ? 'El token ve el repo' : 'El token NO ve ese repo', acceso ? '' : 'error');
+  } catch (e) {
+    const msg = e.status === 401 ? 'Token inválido o revocado (401)' : 'No se pudo comprobar el token';
+    set('⚠️ ' + msg);
+    toast(msg, 'error');
   }
 }
 
@@ -1699,6 +1819,334 @@ function vistaAnalisis(view) {
   });
 }
 
+/* ============ Vista: Compartidos / Bizum ============ */
+function vistaCompartidos(view) {
+  const bal = balancesCompartidos();
+  const gente = personasLista();
+  const evs = (state.compartidosEventos || []).slice().sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')) || (b.creado || 0) - (a.creado || 0));
+  const bzs = (state.bizums || []).slice().sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')) || (b.creado || 0) - (a.creado || 0));
+
+  const filasGente = gente.length ? gente.map((p) => {
+    const s = bal.saldo[p.id] || 0;
+    const cls = s > 0.004 ? 'pct-good' : s < -0.004 ? 'pct-bad' : '';
+    return `<div class="history-item" style="cursor:default">
+      <span class="m" style="flex:1">${escapeHtml(p.nombre)}<span class="c" style="display:block">${s > 0.004 ? 'te debe' : s < -0.004 ? 'le debes' : 'en paz'}</span></span>
+      <span class="v ${cls}">${s > 0 ? '+' : s < 0 ? '−' : ''}${eur(Math.abs(s))}</span>
+      <button class="icon-btn danger" data-del-per="${p.id}" type="button" aria-label="Eliminar persona">🗑</button>
+    </div>`;
+  }).join('') : '<div class="empty" style="padding:14px">Añade personas para controlar cenas y bizums.</div>';
+
+  const filasEv = evs.length ? evs.slice(0, 25).map((ev) => {
+    const mi = (ev.participantes || []).find((x) => x.id === 'yo');
+    const miParte = mi ? +mi.importe || 0 : 0;
+    return `<div class="history-item" style="cursor:default">
+      <span class="m" style="flex:1">${escapeHtml(ev.descripcion || 'Gasto compartido')}
+        <span class="c" style="display:block">${fmtDia(ev.fecha)} · pagó ${escapeHtml(nombreParticipante(ev.pagador))} · tu parte ${eur(miParte)}</span></span>
+      <span class="v">${eur(ev.importe)}</span>
+      <button class="icon-btn danger" data-del-ev="${ev.id}" type="button" aria-label="Eliminar gasto">🗑</button>
+    </div>`;
+  }).join('') : '<div class="empty" style="padding:14px">Aún no hay gastos compartidos. Añade una cena y reparte.</div>';
+
+  const filasBz = bzs.length ? bzs.slice(0, 25).map((b) => {
+    const importe = +b.importe || 0;
+    const mePagan = importe > 0;
+    return `<div class="history-item" style="cursor:default">
+      <span class="m" style="flex:1">${escapeHtml(nombreParticipante(b.personaId))}
+        <span class="c" style="display:block">${fmtDia(b.fecha)} · ${mePagan ? 'me pagó' : 'le pagué'}${b.nota ? ' · ' + escapeHtml(b.nota) : ''}</span></span>
+      <span class="v ${mePagan ? 'pct-good' : 'pct-bad'}">${mePagan ? '+' : '−'}${eur(Math.abs(importe))}</span>
+      <button class="icon-btn danger" data-del-bz="${b.id}" type="button" aria-label="Eliminar bizum">🗑</button>
+    </div>`;
+  }).join('') : '<div class="empty" style="padding:14px">Sin bizums registrados.</div>';
+
+  view.innerHTML = `
+    <header class="view-header">
+      <h1>🤝 Compartidos</h1>
+      <button class="btn secondary small" id="comp-back" type="button">← Gastos</button>
+    </header>
+    <div class="stat-grid" style="margin-bottom:12px">
+      <div class="stat"><div class="label">Te deben</div><div class="value pct-good">${eur(bal.debido)}</div></div>
+      <div class="stat"><div class="label">Debes</div><div class="value pct-bad">${eur(bal.debo)}</div></div>
+      <div class="stat"><div class="label">Neto</div><div class="value ${bal.neto >= 0 ? 'pct-good' : 'pct-bad'}">${bal.neto >= 0 ? '+' : '−'}${eur(Math.abs(bal.neto))}</div></div>
+    </div>
+    <button class="btn full" id="add-evento" type="button">+ Gasto compartido</button>
+    <div style="display:flex;gap:10px;margin:10px 0 6px;flex-wrap:wrap">
+      <button class="btn secondary small" id="add-persona" type="button">+ Añadir persona</button>
+      <button class="btn secondary small" id="add-bizum" type="button">💸 Registrar Bizum</button>
+    </div>
+
+    <h2 style="margin:16px 4px 10px">Personas</h2>
+    <div class="card" style="padding-top:4px;padding-bottom:4px">${filasGente}</div>
+
+    <h2 style="margin:16px 4px 10px">Gastos compartidos</h2>
+    <div class="card" style="padding-top:4px;padding-bottom:4px">${filasEv}</div>
+
+    <h2 style="margin:16px 4px 10px">Bizums</h2>
+    <div class="card" style="padding-top:4px;padding-bottom:4px">${filasBz}</div>
+  `;
+
+  $('#comp-back').onclick = () => irTab('gastos');
+  $('#add-evento').onclick = () => modalEventoCompartido();
+  $('#add-persona').onclick = () => modalPersona();
+  $('#add-bizum').onclick = () => modalBizum();
+  view.querySelectorAll('[data-del-per]').forEach((b) => {
+    b.onclick = () => {
+      const id = b.dataset.delPer;
+      const p = personasLista().find((x) => x.id === id);
+      if (!p) return;
+      const usada = (state.compartidosEventos || []).some((ev) => ev.pagador === id || (ev.participantes || []).some((x) => x.id === id)) || (state.bizums || []).some((b2) => b2.personaId === id);
+      if (usada) return toast('No puedes borrar a ' + p.nombre + ': tiene gastos o bizums', 'error');
+      if (!confirm('¿Eliminar a ' + p.nombre + '?')) return;
+      tumba('personas', id);
+      state.personas = state.personas.filter((x) => x.id !== id);
+      guardarEstado(); render();
+    };
+  });
+  view.querySelectorAll('[data-del-ev]').forEach((b) => {
+    b.onclick = () => {
+      const id = b.dataset.delEv;
+      const ev = (state.compartidosEventos || []).find((x) => x.id === id);
+      if (!ev) return;
+      if (!confirm('¿Eliminar este gasto compartido?' + (ev.gastoId ? ' También se borrará de Gastos.' : ''))) return;
+      tumba('compartidosEventos', id);
+      state.compartidosEventos = state.compartidosEventos.filter((x) => x.id !== id);
+      if (ev.gastoId) {
+        tumba('gastos', ev.gastoId);
+        state.gastos = state.gastos.filter((g) => g.id !== ev.gastoId);
+      }
+      guardarEstado(); render();
+    };
+  });
+  view.querySelectorAll('[data-del-bz]').forEach((b) => {
+    b.onclick = () => {
+      const id = b.dataset.delBz;
+      if (!confirm('¿Eliminar este bizum?')) return;
+      tumba('bizums', id);
+      state.bizums = state.bizums.filter((x) => x.id !== id);
+      guardarEstado(); render();
+    };
+  });
+}
+
+/* ---- Modal: nueva persona ---- */
+function modalPersona() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>Añadir persona</h3>
+      <div class="field"><label for="per-nombre">Nombre</label>
+        <input id="per-nombre" type="text" placeholder="Ej.: María" autofocus /></div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="per-cancel" type="button">Cancelar</button>
+        <button class="btn" id="per-save" type="button">Guardar</button>
+      </div>
+    </div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+  $('#per-cancel', overlay).onclick = cerrar;
+  $('#per-save', overlay).onclick = () => {
+    const nombre = $('#per-nombre', overlay).value.trim();
+    if (!nombre) return toast('Escribe un nombre', 'error');
+    if (personasLista().some((p) => p.nombre.toLowerCase() === nombre.toLowerCase())) return toast('Esa persona ya existe', 'error');
+    state.personas = state.personas || [];
+    state.personas.push(stamp({ id: uid(), nombre }));
+    guardarEstado(); cerrar(); toast('Persona añadida'); render();
+  };
+  $('#per-nombre', overlay).addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#per-save', overlay).click(); });
+}
+
+/* ---- Modal: gasto compartido ---- */
+function modalEventoCompartido() {
+  if (!personasLista().length) {
+    toast('Añade al menos una persona primero', 'error');
+    return modalPersona();
+  }
+  const cats = state.categorias;
+  const catDef = cats.find((c) => /ocio/i.test(c.nombre)) || cats[0];
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>Gasto compartido</h3>
+      <div class="form-card">
+        <div class="field"><label for="ev-desc">Descripción</label>
+          <input id="ev-desc" type="text" placeholder="Cena, regalo, taxi…" /></div>
+        <div class="field-row" style="margin-bottom:12px">
+          <div class="field"><label for="ev-importe">Importe total (€)</label>
+            <input id="ev-importe" type="text" inputmode="decimal" placeholder="0,00" /></div>
+          <div class="field"><label for="ev-fecha">Fecha</label>
+            <input id="ev-fecha" type="date" value="${hoyISO()}" /></div>
+        </div>
+        <div class="field"><label for="ev-pagador">Pagó</label>
+          <select id="ev-pagador">
+            <option value="yo">Yo</option>
+            ${personasLista().map((p) => `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`).join('')}
+          </select></div>
+        <div class="field"><label>Participantes</label>
+          <div id="ev-parts">
+            ${[
+              { id: 'yo', nombre: 'Yo' },
+              ...personasLista().map((p) => ({ id: p.id, nombre: p.nombre })),
+            ].map((p) => `
+              <div class="panel-item" data-part="${p.id}">
+                <label style="display:flex;align-items:center;gap:8px;flex:1;color:var(--text)">
+                  <input type="checkbox" class="ev-chk" style="width:auto" checked />
+                  ${escapeHtml(p.nombre)}
+                </label>
+                <input type="text" class="w-budget ev-share" inputmode="decimal" placeholder="0,00" />
+              </div>`).join('')}
+          </div>
+          <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
+            <button class="btn secondary small" id="ev-split" type="button">Repartir a partes iguales</button>
+          </div>
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;color:var(--text)">
+            <input type="checkbox" id="ev-gasto" style="width:auto" checked />
+            Añadir mi parte a Gastos
+          </label>
+          <select id="ev-cat" style="margin-top:8px">
+            ${cats.map((c) => `<option value="${c.id}" ${c.id === catDef?.id ? 'selected' : ''}>${escapeHtml(c.nombre)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="ev-cancel" type="button">Cancelar</button>
+        <button class="btn" id="ev-save" type="button">Guardar</button>
+      </div>
+    </div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+
+  const filas = () => [...overlay.querySelectorAll('[data-part]')];
+  const idsMarcados = () => filas().filter((f) => $('.ev-chk', f).checked).map((f) => f.dataset.part);
+
+  const repartir = () => {
+    const total = parseAmount($('#ev-importe', overlay).value) || 0;
+    const ids = idsMarcados();
+    const partes = repartirIgual(total, ids);
+    filas().forEach((f) => {
+      const inp = $('.ev-share', f);
+      inp.value = partes[f.dataset.part] != null ? String(partes[f.dataset.part]).replace('.', ',') : '';
+    });
+  };
+  $('#ev-split', overlay).onclick = repartir;
+  $('#ev-importe', overlay).addEventListener('blur', () => {
+    if (filas().every((f) => !$('.ev-share', f).value)) repartir();
+  });
+  filas().forEach((f) => $('.ev-chk', f).addEventListener('change', () => {
+    // al cambiar participantes, reparte de nuevo si las cuotas estaban vacías
+    if (filas().every((x) => !$('.ev-share', x).value)) repartir();
+  }));
+
+  $('#ev-cancel', overlay).onclick = cerrar;
+  $('#ev-save', overlay).onclick = () => {
+    const descripcion = $('#ev-desc', overlay).value.trim();
+    const importe = parseAmount($('#ev-importe', overlay).value);
+    const fecha = $('#ev-fecha', overlay).value;
+    const pagador = $('#ev-pagador', overlay).value;
+    if (!descripcion) return toast('Escribe una descripción', 'error');
+    if (!importe || importe <= 0) return toast('Importe total inválido', 'error');
+    if (!fecha) return toast('Fecha inválida', 'error');
+    const participantes = [];
+    let suma = 0;
+    for (const f of filas()) {
+      if (!$('.ev-chk', f).checked) continue;
+      const share = parseAmount($('.ev-share', f).value) || 0;
+      if (share < 0) return toast('Las partes no pueden ser negativas', 'error');
+      participantes.push({ id: f.dataset.part, importe: Math.round(share * 100) / 100 });
+      suma += share;
+    }
+    if (!participantes.length) return toast('Elige al menos un participante', 'error');
+    if (Math.abs(suma - importe) > 0.02) {
+      return toast(`Las partes suman ${eur(suma)} y el total es ${eur(importe)}; ajusta`, 'error');
+    }
+    if (participantes.length === 1 && participantes[0].id === 'yo') {
+      return toast('Marca a alguien más o registra el gasto normal en Gastos', 'error');
+    }
+    const ev = stamp({
+      id: uid(),
+      fecha,
+      descripcion,
+      importe: Math.round(importe * 100) / 100,
+      pagador,
+      participantes,
+      gastoId: null,
+      creado: Date.now(),
+    });
+    const miParte = participantes.find((p) => p.id === 'yo');
+    if ($('#ev-gasto', overlay).checked && miParte && miParte.importe > 0) {
+      const g = stamp({
+        id: uid(),
+        monto: miParte.importe,
+        fecha,
+        catId: $('#ev-cat', overlay).value,
+        nota: `${descripcion} (compartido)`,
+        creado: Date.now(),
+      });
+      state.gastos.push(g);
+      ev.gastoId = g.id;
+    }
+    state.compartidosEventos = state.compartidosEventos || [];
+    state.compartidosEventos.push(ev);
+    guardarEstado(); cerrar(); toast('Gasto compartido guardado'); render();
+  };
+}
+
+/* ---- Modal: bizum / liquidación ---- */
+function modalBizum() {
+  if (!personasLista().length) {
+    toast('Añade primero una persona', 'error');
+    return modalPersona();
+  }
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>Registrar Bizum</h3>
+      <div class="form-card">
+        <div class="field"><label for="bz-persona">Persona</label>
+          <select id="bz-persona">
+            ${personasLista().map((p) => `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`).join('')}
+          </select></div>
+        <div class="field-row" style="margin-bottom:12px">
+          <div class="field"><label for="bz-dir">Dirección</label>
+            <select id="bz-dir">
+              <option value="recibo">Me ha pagado</option>
+              <option value="envio">Le he pagado</option>
+            </select></div>
+          <div class="field"><label for="bz-importe">Importe (€)</label>
+            <input id="bz-importe" type="text" inputmode="decimal" placeholder="0,00" /></div>
+        </div>
+        <div class="field"><label for="bz-fecha">Fecha</label>
+          <input id="bz-fecha" type="date" value="${hoyISO()}" /></div>
+        <div class="field"><label for="bz-nota">Nota (opcional)</label>
+          <input id="bz-nota" type="text" placeholder="Ej.: cena sábado" /></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="bz-cancel" type="button">Cancelar</button>
+        <button class="btn" id="bz-save" type="button">Guardar</button>
+      </div>
+    </div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+  $('#bz-cancel', overlay).onclick = cerrar;
+  $('#bz-save', overlay).onclick = () => {
+    const personaId = $('#bz-persona', overlay).value;
+    const importe = parseAmount($('#bz-importe', overlay).value);
+    const fecha = $('#bz-fecha', overlay).value;
+    if (!importe || importe <= 0) return toast('Importe inválido', 'error');
+    if (!fecha) return toast('Fecha inválida', 'error');
+    const signo = $('#bz-dir', overlay).value === 'recibo' ? 1 : -1;
+    state.bizums = state.bizums || [];
+    state.bizums.push(stamp({ id: uid(), personaId, importe: signo * Math.round(importe * 100) / 100, fecha, nota: $('#bz-nota', overlay).value.trim(), creado: Date.now() }));
+    guardarEstado(); cerrar(); toast('Bizum registrado'); render();
+  };
+}
+
 /* ============ Vista: Ajustes ============ */
 function vistaAjustes(view) {
   const presupuesto = state.categorias.map((c, i) => `
@@ -1802,6 +2250,7 @@ function vistaAjustes(view) {
         <input id="gh-ruta" type="text" placeholder="finanzas.json" value="${escapeHtml((state.ajustes.github || {}).ruta || '')}" /></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
         <button class="btn small" id="btn-gh-probar" type="button">🔄 Sincronizar con GitHub</button>
+        <button class="btn secondary small" id="btn-gh-check" type="button">🔍 Comprobar token</button>
       </div>
       <p class="hint">Si lo configuras, se usa NUBE GITHUB y el servidor casero queda como respaldo. El token se guarda <strong>solo en este dispositivo</strong> (no se sincroniza ni se exporta). Crea el token en github.com → Settings → Developer settings → Fine-grained tokens.</p>
     </div>
@@ -1837,6 +2286,7 @@ function vistaAjustes(view) {
       <div class="card-title"><span>Instalar la app</span></div>
       <button class="btn full" id="btn-install" type="button" ${deferredInstall ? '' : 'disabled'}>📲 Instalar en este dispositivo</button>
       <button class="btn secondary small full" id="btn-update" type="button" style="margin-top:10px">🔄 Buscar actualización de la app</button>
+      <div class="hint" id="version-info">Comprobando versión publicada…</div>
       <p class="hint">Si has publicado cambios y este dispositivo sigue con la versión vieja, pulsa «Buscar actualización»: recarga la última versión <strong>sin borrar tus datos ni el token</strong>.</p>
       <p class="hint"><strong>Android:</strong> abre la web en Chrome → menú (⋮) → «Añadir a pantalla de inicio».<br>
       <strong>iPhone:</strong> abre la web en Safari → botón Compartir → «Añadir a pantalla de inicio».<br>
@@ -2029,6 +2479,8 @@ function vistaAjustes(view) {
   $('#btn-sync-up').onclick = () => syncAhora(true);
   $('#btn-sync-down').onclick = () => syncBajar();
   $('#btn-gh-probar').onclick = () => syncAhora(true);
+  const btnGhCheck = $('#btn-gh-check');
+  if (btnGhCheck) btnGhCheck.onclick = () => ghDiagnostico();
 
   // Config GitHub (por dispositivo, no se sincroniza)
   const ghCampo = (id, clave, esUltimo = false) => {
@@ -2068,6 +2520,7 @@ function vistaAjustes(view) {
   const bi = $('#btn-install');
   const bu = $('#btn-update');
   if (bu) bu.onclick = buscarActualizacion;
+  comprobarVersionPublicada();
   if (deferredInstall) {
     bi.disabled = false;
     bi.onclick = async () => {
@@ -2097,9 +2550,10 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 
 (() => {
   const h = location.hash.replace('#', '');
-  if (['gastos', 'objetivo', 'inversion', 'patrimonio', 'analisis', 'ajustes'].includes(h)) {
+  if (['gastos', 'objetivo', 'inversion', 'patrimonio', 'compartidos', 'analisis', 'ajustes'].includes(h)) {
     ui.tab = h;
-    document.querySelectorAll('#tabs .tab').forEach((b) => { b.classList.toggle('active', b.dataset.tab === h); });
+    const activo = h === 'compartidos' ? 'gastos' : h;
+    document.querySelectorAll('#tabs .tab').forEach((b) => { b.classList.toggle('active', b.dataset.tab === activo); });
   }
   render();
   if (autoSyncActivo()) syncAhora();

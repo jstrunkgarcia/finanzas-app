@@ -26,7 +26,7 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 DB_RUTA = os.path.join(DIR, 'finanzas_sync.db')
 JSON_VIEJO = os.path.join(DIR, 'sync_data.json')
 
-COLECCIONES = ('gastos', 'snapshots', 'categorias', 'holdings', 'cubos')
+COLECCIONES = ('gastos', 'snapshots', 'categorias', 'holdings', 'cubos', 'personas', 'compartidosEventos', 'bizums')
 TUMBA_MAX_MS = 90 * 24 * 3600 * 1000  # las lápidas de borrado viven 90 días
 
 bloqueo = threading.Lock()
