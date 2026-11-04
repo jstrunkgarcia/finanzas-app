@@ -3,11 +3,90 @@
 
 /* ============ Utilidades ============ */
 const $ = (sel, root = document) => root.querySelector(sel);
-const APP_VERSION = 'versión 20 · 4 nov 2026';
+const APP_VERSION = 'versión 23 · 4 nov 2026';
 const uid = () =>
   (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now().toString(36) + Math.random().toString(36).slice(2));
 
 const PALETA = ['#8b5cf6', '#38bdf8', '#f59e0b', '#10b981', '#f43f5e', '#22d3ee', '#a78bfa', '#fb923c', '#4ade80', '#e879f9'];
+
+/* Iconos de línea (estilo Lucide) para la interfaz */
+const ICONOS = {
+  inicio: '<path d="M3 10.7 12 3l9 7.7"/><path d="M5.5 9.5V21h13V9.5"/><path d="M9.5 21v-6h5v6"/>',
+  gastos: '<path d="M6 3h12a1 1 0 0 1 1 1v17l-3-2-2 2-2-2-2 2-2-2-3 2V4a1 1 0 0 1 1-1Z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+  patrimonio: '<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 16 9 5 9-5"/>',
+  analisis: '<path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 15 4-5 3.5 2.5L20 6"/>',
+  objetivos: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><path d="M12 2v2M22 12h-2M12 20v2M2 12h2"/>',
+  ajustes: '<path d="M4 7h10M18 7h2M4 12h2M10 12h10M4 17h8M16 17h4"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="14" cy="17" r="2"/>',
+  mas: '<path d="M12 5v14M5 12h14"/>',
+  flecha: '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
+  chevron: '<path d="m9 6 6 6-6 6"/>',
+  casa: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/>',
+  escudo: '<path d="M12 3 20 6v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6l8-3Z"/><path d="m9 12 2 2 4-4"/>',
+  avion: '<path d="M21 3 3.6 10.3a.5.5 0 0 0 0 .94l6.7 2.2 2.2 6.7a.5.5 0 0 0 .94 0L21 3Z"/><path d="m10.3 13.4 4.1-4.1"/>',
+  bolsa: '<path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/>',
+  cartera: '<rect x="4" y="7" width="16" height="13" rx="2"/><path d="M4 7V5a1 1 0 0 1 1-1h10l2 3"/><path d="M16 12h4v4h-4a2 2 0 0 1 0-4Z"/>',
+  comida: '<path d="M4 2v7a3 3 0 0 0 6 0V2"/><path d="M7 2v20"/><path d="M17 2c-2 2-3 5-3 8 0 2 1 3 3 3h1v9"/>',
+  coche: '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9L18.4 7c-.2-.6-.8-1-1.4-1H7c-.6 0-1.2.4-1.4 1L3.5 11.1C2.7 11.3 2 12.1 2 13v3c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/>',
+  compras: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  banco: '<path d="m3 9 9-5 9 5"/><path d="M5 10v8M10 10v8M14 10v8M19 10v8"/><path d="M3 21h18"/>',
+  tarjeta: '<rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M2.5 10h19"/><path d="M6 15h4"/>',
+  calendario: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/>',
+  editar: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4 11.5-11.5Z"/>',
+  basura: '<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/>',
+  check: '<path d="m4 12 5 5L20 6"/>',
+  alerta: '<path d="M12 3 2 21h20L12 3Z"/><path d="M12 9v5M12 17.5v.5"/>',
+  tendencia: '<path d="m3 17 6-6 4 4 8-9"/><path d="M15 6h6v6"/>',
+  compartido: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 21c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><path d="M17 4.5a3.5 3.5 0 0 1 0 7M17.5 15c2.4.4 4 2.3 4 4.5"/>',
+  descargar: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/>',
+  instalar: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/>',
+  cerrar: '<path d="M6 6l12 12M18 6 6 18"/>',
+  objetivo: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill="currentColor"/>',
+  campana: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>',
+};
+
+function icono(nombre, size = 20) {
+  return `<svg class="icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[nombre] || ICONOS.objetivo}</svg>`;
+}
+
+const CUBO_ICONO = { diaadia: 'tarjeta', emergencia: 'escudo', vivienda: 'casa', viajes: 'avion', jubilacion: 'bolsa' };
+const CUBO_COLOR = { diaadia: '#94a3b8', emergencia: '#60a5fa', vivienda: '#f5c451', viajes: '#a78bfa', jubilacion: '#2eea8b' };
+
+function iconoCubo(id) { return icono(CUBO_ICONO[id] || 'objetivo'); }
+function colorCubo(id) { return CUBO_COLOR[id] || '#94a3b8'; }
+
+/* Emoji estable por categoría para las filas de gasto */
+function emojiCategoria(nombre) {
+  const n = String(nombre || '').toLowerCase();
+  if (/ocio|amigos|pareja|social/.test(n)) return '👥';
+  if (/comida|café|cafe|diario|restaurante/.test(n)) return '🍽️';
+  if (/transporte|móvil|movil|fijo|bus|tren|coche/.test(n)) return '🚗';
+  if (/compra|capricho|ropa|personal/.test(n)) return '🛍️';
+  if (/viaje|regalo|vacacion/.test(n)) return '✈️';
+  if (/casa|hogar|vivienda/.test(n)) return '🏠';
+  if (/salud|médic|medic/.test(n)) return '🩺';
+  return '🏷️';
+}
+
+/* Icono de línea para las filas de categorías de Gastos */
+function iconoCategoria(nombre, size = 18) {
+  const n = String(nombre || '').toLowerCase();
+  if (/ocio|amigos|pareja|social/.test(n)) return icono('compartido', size);
+  if (/comida|café|cafe|diario|restaurante/.test(n)) return icono('comida', size);
+  if (/transporte|móvil|movil|fijo|bus|tren|coche/.test(n)) return icono('coche', size);
+  if (/compra|capricho|ropa|personal/.test(n)) return icono('compras', size);
+  if (/viaje|regalo|vacacion/.test(n)) return icono('avion', size);
+  if (/casa|hogar|vivienda/.test(n)) return icono('casa', size);
+  return icono('gastos', size);
+}
+
+function emojiPorIcono(nombre) {
+  const n = String(nombre || '').toLowerCase();
+  if (/casa|vivienda|hogar/.test(n)) return '🏠';
+  if (/emergencia|colchón|colchon|seguridad/.test(n)) return '🛡️';
+  if (/viaje|vacacion/.test(n)) return '✈️';
+  if (/jubila|inversión|inversion|etf|bolsa/.test(n)) return '📈';
+  return '🎯';
+}
 
 function parseAmount(v) {
   if (typeof v === 'number') return isFinite(v) ? Math.round(v * 100) / 100 : null;
@@ -87,8 +166,11 @@ function activarModal(overlay) {
   }, 60);
 }
 
+const ALIAS_TAB = { compartidos: 'gastos', objetivo: 'objetivos', inversion: 'patrimonio' };
+const TAB_LEGACY = { objetivo: 'objetivos', inversion: 'patrimonio' };
+
 function marcarTabActiva(tab) {
-  const activo = tab === 'compartidos' ? 'gastos' : tab;
+  const activo = ALIAS_TAB[tab] || tab;
   document.querySelectorAll('#tabs .tab').forEach((b) => {
     const on = b.dataset.tab === activo;
     b.classList.toggle('active', on);
@@ -106,6 +188,7 @@ function seedState() {
   return {
     v: 2,
     ajustes: {
+      nombre: '',
       ingreso: 1553.23,
       pagas: {
         activo: true,
@@ -155,12 +238,13 @@ function seedState() {
     personas: [],
     compartidosEventos: [],
     bizums: [],
+    objetivos: [],
     eliminados: [],
   };
 }
 
 let state; // se inicializa tras la declaración de funciones
-let ui = { tab: 'gastos', month: currentMonthKey() };
+let ui = { tab: 'inicio', month: currentMonthKey() };
 let deferredInstall = null;
 
 state = cargarEstado();
@@ -180,12 +264,14 @@ function cargarEstado() {
     if (raw) {
       const s = JSON.parse(raw);
       if (s && Array.isArray(s.categorias)) {
+        s.ajustes.nombre = typeof s.ajustes.nombre === 'string' ? s.ajustes.nombre : '';
         s.ajustes.objetivoCasa = s.ajustes.objetivoCasa || seedState().ajustes.objetivoCasa;
         s.ajustes.pagas = s.ajustes.pagas || seedState().ajustes.pagas;
         s.eliminados = Array.isArray(s.eliminados) ? s.eliminados : [];
         s.personas = Array.isArray(s.personas) ? s.personas : [];
         s.compartidosEventos = Array.isArray(s.compartidosEventos) ? s.compartidosEventos : [];
         s.bizums = Array.isArray(s.bizums) ? s.bizums : [];
+        s.objetivos = Array.isArray(s.objetivos) ? s.objetivos : [];
         if (s.ajustes.github && s.ajustes.github.repo) {
           s.ajustes.github.repo = normalizarRepo(s.ajustes.github.repo);
         }
@@ -576,8 +662,8 @@ function lineaChart(valores, etiquetasX, { alto = 190, color = '#10b981' } = {})
   </svg>`;
 }
 
-function sparkDatos(valores, { w = 96, h = 30 } = {}) {
-  valores = valores.map((v) => v || 0);
+function sparkDatos(valores, { w = 96, h = 30, suave = false, area = false } = {}) {
+  valores = valores.map((v) => +v || 0);
   if (valores.length < 2) return '';
   const min = Math.min(...valores), max = Math.max(...valores);
   const px = (i) => (i * (w - 4)) / Math.max(valores.length - 1, 1) + 2;
@@ -585,42 +671,72 @@ function sparkDatos(valores, { w = 96, h = 30 } = {}) {
   const pts = valores.map((v, i) => `${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ');
   const sube = valores[valores.length - 1] >= valores[0];
   const color = sube ? '#22c55e' : '#f43f5e';
+  let d = '';
+  if (suave && valores.length > 2) {
+    d = `M${px(0).toFixed(1)} ${py(valores[0]).toFixed(1)}`;
+    for (let i = 0; i < valores.length - 1; i++) {
+      const i0 = Math.max(i - 1, 0), i3 = Math.min(i + 2, valores.length - 1);
+      const c1x = px(i) + (px(i + 1) - px(i0)) / 6;
+      const c1y = py(valores[i]) + (py(valores[i + 1]) - py(valores[i0])) / 6;
+      const c2x = px(i + 1) - (px(i3) - px(i)) / 6;
+      const c2y = py(valores[i + 1]) - (py(valores[i3]) - py(valores[i])) / 6;
+      d += ` C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${px(i + 1).toFixed(1)} ${py(valores[i + 1]).toFixed(1)}`;
+    }
+  }
+  const linea = d
+    ? `<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
+    : `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const gid = `spark-${uid()}`;
+  const relleno = area && d && min !== max
+    ? `<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".18"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+       <path d="${d} L${px(valores.length - 1).toFixed(1)} ${h} L${px(0).toFixed(1)} ${h} Z" fill="url(#${gid})"/>`
+    : '';
   return `<svg class="spark" aria-hidden="true" focusable="false" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${relleno}
+    ${linea}
     <circle cx="${px(valores.length - 1)}" cy="${py(valores[valores.length - 1])}" r="2.5" fill="${color}"/>
   </svg>`;
 }
 
 /* ============ App shell ============ */
 function irTab(tab) {
-  ui.tab = tab;
-  try { history.replaceState(null, '', '#' + tab); } catch (e) {}
-  marcarTabActiva(tab);
+  ui.tab = TAB_LEGACY[tab] || tab;
+  try { history.replaceState(null, '', '#' + ui.tab); } catch (e) {}
+  marcarTabActiva(ui.tab);
   render();
-  window.scrollTo({ top: 0 });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function render() {
   const view = $('#view');
+  view.className = '';
+  if (ui.tab === 'inicio') return vistaInicio(view);
   if (ui.tab === 'gastos') return vistaGastos(view);
-  if (ui.tab === 'objetivo') return vistaObjetivo(view);
-  if (ui.tab === 'inversion') return vistaInversion(view);
   if (ui.tab === 'patrimonio') return vistaPatrimonio(view);
-  if (ui.tab === 'compartidos') return vistaCompartidos(view);
   if (ui.tab === 'analisis') return vistaAnalisis(view);
+  if (ui.tab === 'objetivos') return vistaObjetivos(view);
+  if (ui.tab === 'compartidos') return vistaCompartidos(view);
   if (ui.tab === 'ajustes') return vistaAjustes(view);
+  return vistaInicio(view);
+}
+
+function monthNavHTML() {
+  return `
+    <div class="month-nav" aria-label="Cambiar de mes">
+      <button id="mes-prev" type="button" aria-label="Mes anterior">‹</button>
+      <span class="month-label">${fmtMes(ui.month)}</span>
+      <button id="mes-next" type="button" aria-label="Mes siguiente">›</button>
+    </div>`;
 }
 
 function cabecera(titulo, conMes = true) {
   return `
-    <header class="view-header">
-      <h1>${titulo}</h1>
-      ${conMes ? `
-      <div class="month-nav" aria-label="Cambiar de mes">
-        <button id="mes-prev" type="button" aria-label="Mes anterior">‹</button>
-        <span class="month-label">${fmtMes(ui.month)}</span>
-        <button id="mes-next" type="button" aria-label="Mes siguiente">›</button>
-      </div>` : ''}
+    <header class="page-head">
+      <div>
+        <span class="eyebrow">Finanzas personales</span>
+        <h1>${titulo}</h1>
+      </div>
+      ${conMes ? monthNavHTML() : ''}
     </header>`;
 }
 
@@ -630,63 +746,344 @@ function cablearMesNav() {
   if (n) n.onclick = () => { ui.month = nextMonthKey(ui.month); render(); };
 }
 
+/* ============ Helpers de presentación ============ */
+function saludo() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Buenos días';
+  if (h < 20) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
+function fechaHoyLarga() {
+  const s = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function aportePlanMensual() {
+  return state.holdings.reduce((a, h) => a + (+h.plan || 0), 0);
+}
+
+function aportesSnap(mk) {
+  const sn = snapPorMes(mk);
+  if (!sn) return null;
+  return Object.values(sn.aportes || {}).reduce((a, b) => a + (+b || 0), 0);
+}
+
+function donutSVG(segmentos, { size = 190, grosor = 18, total = null, valor = '', etiqueta = '' } = {}) {
+  const validos = (segmentos || []).filter((s) => (+s.valor || 0) > 0);
+  const suma = total != null ? total : validos.reduce((a, s) => a + (+s.valor || 0), 0);
+  const radio = (size - grosor) / 2;
+  const circ = 2 * Math.PI * radio;
+  let offset = 0;
+  const arcos = validos.map((s) => {
+    const frac = suma > 0 ? (+s.valor || 0) / suma : 0;
+    const len = Math.max(frac * circ - 2, 0);
+    const el = `<circle cx="${size / 2}" cy="${size / 2}" r="${radio}" fill="none" stroke="${s.color || '#94a3b8'}" stroke-width="${grosor}" stroke-linecap="round" stroke-dasharray="${len.toFixed(2)} ${(circ - len).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}" transform="rotate(-90 ${size / 2} ${size / 2})"/>`;
+    offset += frac * circ;
+    return el;
+  }).join('');
+  return `<div class="donut" style="--donut-size:${size}px">
+    <svg viewBox="0 0 ${size} ${size}" role="img" aria-label="Distribución">
+      <circle cx="${size / 2}" cy="${size / 2}" r="${radio}" fill="none" stroke="rgba(255,255,255,.055)" stroke-width="${grosor}"/>
+      ${arcos}
+    </svg>
+    <div class="donut-center">${valor ? `<strong>${valor}</strong>` : ''}${etiqueta ? `<span>${etiqueta}</span>` : ''}</div>
+  </div>`;
+}
+
+/* Anillo compacto de presupuesto para Gastos */
+function anilloProgreso(pct, { size = 82, grosor = 8, label = '' } = {}) {
+  const radio = (size - grosor) / 2;
+  const circ = 2 * Math.PI * radio;
+  const frac = pct == null ? 0 : Math.max(0, Math.min(pct, 1));
+  const len = circ * frac;
+  const color = pct == null ? 'rgba(255,255,255,.2)' : pct > 1 ? 'var(--rose)' : pct > 0.7 ? 'var(--gold)' : 'var(--accent)';
+  const arco = frac > 0 ? `<circle cx="${size / 2}" cy="${size / 2}" r="${radio}" fill="none" stroke="${color}" stroke-width="${grosor}" stroke-linecap="round" stroke-dasharray="${len.toFixed(2)} ${(circ - len).toFixed(2)}" transform="rotate(-90 ${size / 2} ${size / 2})"/>` : '';
+  return `<div class="progress-ring" style="--ring-size:${size}px">
+    <svg viewBox="0 0 ${size} ${size}" role="img" aria-label="Presupuesto consumido: ${escapeHtml(label)}">
+      <circle cx="${size / 2}" cy="${size / 2}" r="${radio}" fill="none" stroke="rgba(255,255,255,.075)" stroke-width="${grosor}"/>
+      ${arco}
+    </svg>
+    <span class="progress-ring-label">${escapeHtml(label)}</span>
+  </div>`;
+}
+
+/* Navegación interna de tarjetas */
+function cablearNavegacion(view) {
+  view.querySelectorAll('[data-nav]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      irTab(el.dataset.nav);
+    });
+  });
+}
+
+/* ============ Vista: Inicio ============ */
+function vistaInicio(view) {
+  view.classList.add('view-inicio');
+  const mk = currentMonthKey();
+  const stats = statsPatrimonio();
+  const gastos = gastosDelMes(mk);
+  const total = totalGastado(mk);
+  const presupuesto = presupuestoTotal();
+  const pctG = presupuesto > 0 ? total / presupuesto : 0;
+  const saldos = saldosActuales();
+  const v = datosVivienda();
+  const pctCasa = v.objetivo > 0 ? Math.min(v.fondo / v.objetivo, 1) : 0;
+  const nombre = (state.ajustes.nombre || '').trim();
+  const aportesMes = aportesSnap(mk);
+  const planMes = aportePlanMensual();
+  const aportesRegistrados = aportesMes != null && aportesMes > 0;
+  const ahorroMes = aportesRegistrados ? aportesMes : planMes;
+  const comp = balancesCompartidos();
+  const resumenComp = (comp.debido > 0.004 || comp.debo > 0.004)
+    ? `${comp.debido > 0.004 ? `Te deben ${eur(comp.debido)}` : ''}${comp.debido > 0.004 && comp.debo > 0.004 ? ' · ' : ''}${comp.debo > 0.004 ? `Debes ${eur(comp.debo)}` : ''}`
+    : 'Controla cenas, regalos y bizums sin perder la cuenta.';
+  const recientes = state.gastos
+    .slice()
+    .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)) || (b.creado || 0) - (a.creado || 0))
+    .slice(0, 5);
+  const serie = stats.serie;
+  const variacion = stats.perfMes != null ? stats.perfMes : stats.roi;
+  const variacionEsMes = stats.perfMes != null;
+  const mesCorto = MESES[+mk.split('-')[1] - 1];
+  const pctGastosTxt = presupuesto > 0 ? `${Math.round(pctG * 100)} %` : '—';
+  const pctCasaTxt = (pctCasa * 100).toFixed(1).replace('.', ',');
+  const snHoy = snapPorMes(mk);
+  const pagaPendiente = pagasConfig().activo && esMesDePaga(mk) && (!snHoy || !snHoy.pagaAplicada);
+  const excedidas = state.categorias.filter((c) => {
+    const gastado = gastos.filter((g) => g.catId === c.id).reduce((a, g) => a + g.monto, 0);
+    return c.presupuesto > 0 && gastado > c.presupuesto;
+  });
+  const avisos = [];
+  if (!snHoy) avisos.push({ tipo: 'info', icono: icono('calendario', 15), html: `Aún no has registrado los valores de <strong>${fmtMes(mk)}</strong>.` });
+  if (pagaPendiente) avisos.push({ tipo: 'info', icono: icono('calendario', 15), html: `Tienes una <strong>paga extra</strong> de ${eur(+pagasConfig().importe || 0)} pendiente de aplicar.` });
+  if (excedidas.length) avisos.push({ tipo: 'alerta', icono: icono('alerta', 15), html: `Has superado el presupuesto en <strong>${excedidas.length} ${excedidas.length === 1 ? 'categoría' : 'categorías'}</strong> este mes.` });
+  const hayAvisos = avisos.length > 0;
+
+  const recientesHtml = recientes.length ? recientes.map((g) => {
+    const cat = catPorId(g.catId);
+    const color = cat ? cat.color : '#64748b';
+    return `<div class="recent-row" data-edit="${g.id}" role="button" tabindex="0" aria-label="Editar gasto">
+      <span class="recent-ico" style="background:${color}1f;border-color:${color}33">${cat ? emojiCategoria(cat.nombre) : '🏷️'}</span>
+      <div class="recent-main"><strong>${escapeHtml(g.nota || 'Gasto')}</strong><span>${escapeHtml(cat ? cat.nombre : 'Sin categoría')} · ${fmtDia(g.fecha)}</span></div>
+      <span class="recent-amount">${eur(g.monto)}</span>
+    </div>`;
+  }).join('') : '<div class="empty" style="padding:18px"><span class="big">🧾</span>Aún no hay movimientos este mes.</div>';
+
+  view.innerHTML = `
+    <header class="page-head inicio-head">
+      <div class="inicio-head-copy">
+        <h1>${saludo()}${nombre ? `, ${escapeHtml(nombre)}` : ''} 👋</h1>
+        <p class="page-sub">Así va tu plan financiero</p>
+      </div>
+      <div class="page-head-actions">
+        <button class="btn" id="inicio-add-top" type="button">${icono('mas', 16)} Añadir gasto</button>
+        <button class="icon-btn inicio-bell" id="inicio-avisos" type="button" aria-label="Ver avisos">${icono('campana', 19)}${hayAvisos ? '<span class="bell-dot"></span>' : ''}</button>
+      </div>
+    </header>
+
+    ${pagaPendiente ? `
+    <div class="banner">
+      <span class="banner-ico">${icono('calendario', 19)}</span>
+      <div class="banner-text"><strong>Paga extra de ${fmtMes(mk).toLowerCase()}</strong>${eur(+pagasConfig().importe || 0)} pendiente de aplicar a tus aportaciones.</div>
+      <button class="btn small" id="inicio-paga" type="button">Aplicar paga</button>
+    </div>` : ''}
+
+    <div class="dashboard-grid">
+      <div class="dashboard-main">
+        <section class="card networth-card">
+          <div class="networth-top">
+            <div class="networth-copy">
+              <span class="networth-label">Patrimonio total</span>
+              <div class="hero-value networth-value">${eur(stats.total)}</div>
+              <div class="networth-trend ${variacion == null ? 'neutral' : variacion < 0 ? 'negative' : 'positive'}">
+                ${variacion != null ? `<span class="trend-mark" aria-hidden="true">${variacion < 0 ? '▼' : '▲'}</span>` : ''}
+                <strong>${fmtPct(variacion, { decimales: 1 })}</strong>
+                <span>${variacionEsMes ? 'este mes' : variacion != null ? 'desde el inicio' : 'sin datos'}</span>
+              </div>
+              <span class="networth-aportado">Aportado ${eur(stats.aportado)}</span>
+            </div>
+            ${stats.total > 0 ? `<div class="networth-spark">${sparkDatos(serie.length > 1 ? serie.map((s) => s.post) : [stats.total, stats.total], { w: 150, h: 46, suave: true, area: true })}</div>` : ''}
+          </div>
+          <div class="hero-actions">
+            <button class="btn small" id="inicio-ver-patrimonio" type="button">${icono('patrimonio', 16)} Ver patrimonio</button>
+            <button class="btn secondary small" id="inicio-registrar" type="button">${icono('editar', 16)} Registrar valores</button>
+          </div>
+        </section>
+
+        <div class="home-summary-mobile" aria-label="Resumen financiero">
+          <div class="summary-row" data-nav="gastos" role="button" tabindex="0" aria-label="Ver gastos del mes">
+            <span class="summary-ico green">${icono('cartera', 20)}</span>
+            <div class="summary-main">
+              <div class="summary-title">Gastos <span>(${mesCorto})</span></div>
+              <div class="summary-sub"><strong>${eur(total)}</strong> <span>/ ${eur(presupuesto, 0)}</span></div>
+            </div>
+            <span class="summary-right ${pctG > 1 ? 'pct-bad' : ''}">${pctGastosTxt}</span>
+          </div>
+          <div class="summary-row" data-nav="patrimonio" role="button" tabindex="0" aria-label="Ver ahorro e inversión">
+            <span class="summary-ico green">${icono('patrimonio', 20)}</span>
+            <div class="summary-main">
+              <div class="summary-title">Ahorro e inversión</div>
+              <div class="summary-sub"><strong>${eur(ahorroMes)}</strong> <span>${aportesRegistrados ? 'este mes' : 'plan mensual'}</span></div>
+            </div>
+            <span class="summary-right summary-arrow">${icono('chevron', 17)}</span>
+          </div>
+          <div class="summary-row summary-goal-row" data-nav="objetivos" role="button" tabindex="0" aria-label="Ver objetivos">
+            <span class="summary-ico gold">${icono('casa', 20)}</span>
+            <div class="summary-main">
+              <div class="summary-title">Objetivo: Casa</div>
+              <div class="summary-sub"><strong>${eur(v.fondo)}</strong> <span>de ${eur0(v.objetivo)}</span></div>
+            </div>
+            <span class="summary-right">${pctCasaTxt} %</span>
+            <div class="progress summary-progress"><span style="width:${pctCasa * 100}%"></span></div>
+          </div>
+        </div>
+
+        <section class="card money-card">
+          <div class="card-head">
+            <h2>Tu dinero ahora</h2>
+            <button class="card-link" data-nav="patrimonio" type="button">Ver detalle ${icono('flecha', 14)}</button>
+          </div>
+          <div class="money-tiles">
+            <div class="money-tile">
+              <span class="tile-icon">${icono('banco', 22)}</span>
+              <span class="mt-label">Ibercaja</span>
+              <strong>${eur0(saldos.diaadia)}</strong>
+            </div>
+            <div class="money-tile">
+              <span class="tile-icon">${icono('patrimonio', 22)}</span>
+              <span class="mt-label">Emergencia</span>
+              <strong>${eur0(saldos.colchon)}</strong>
+            </div>
+            <div class="money-tile">
+              <span class="tile-icon">${icono('tendencia', 22)}</span>
+              <span class="mt-label">Inversión</span>
+              <strong>${eur0(saldos.inversion)}</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="card recent-card">
+          <div class="card-head">
+            <div><h2>Movimientos recientes</h2><p>Últimos gastos registrados</p></div>
+            <button class="card-link" data-nav="gastos" type="button">Ver todos ${icono('chevron', 13)}</button>
+          </div>
+          ${recientesHtml}
+        </section>
+      </div>
+
+      <aside class="dashboard-side">
+        <article class="card goal-preview">
+          <div class="goal-top">
+            <div class="goal-icon gold">${icono('casa', 22)}</div>
+            <div class="goal-info">
+              <span class="card-eyebrow">Objetivo</span>
+              <h2>Casa</h2>
+              <div class="goal-date">${icono('calendario', 13)} ${v.fechaObj ? `Fecha objetivo ${fmtMes(v.fechaObj)}` : 'Sin fecha objetivo'}</div>
+            </div>
+            <span class="pill goal-badge ${pctCasa >= 1 ? 'good' : ''}">${(pctCasa * 100).toFixed(1).replace('.', ',')} %</span>
+          </div>
+          <div class="goal-value-row"><strong>${eur0(v.fondo)}</strong><span>de ${eur0(v.objetivo)}</span></div>
+          <div class="progress lg"><span style="width:${pctCasa * 100}%"></span></div>
+          <div class="goal-preview-foot"><span>${eur0(v.aporteMes)}/mes</span><span>${v.llegada ? `Llegada ${fmtMes(v.llegada)}` : 'Define tu aporte'}</span></div>
+          <button class="btn secondary small full" data-nav="objetivos" type="button">Ver objetivos ${icono('flecha', 14)}</button>
+        </article>
+
+        <article class="card">
+          <div class="card-head" style="margin-bottom:10px">
+            <div><h2>Compartidos y Bizum</h2><p>${resumenComp}</p></div>
+            <span class="mini-icon">${icono('compartido', 18)}</span>
+          </div>
+          <button class="btn secondary small full" data-nav="compartidos" type="button">Abrir compartidos</button>
+        </article>
+      </aside>
+    </div>
+  `;
+
+  cablearNavegacion(view);
+  view.querySelectorAll('[data-edit]').forEach((el) => {
+    el.onclick = () => modalGasto(el.dataset.edit);
+  });
+  const add = $('#inicio-add-top');
+  if (add) add.onclick = () => modalGasto(null);
+  const ver = $('#inicio-ver-patrimonio');
+  if (ver) ver.onclick = () => irTab('patrimonio');
+  const reg = $('#inicio-registrar');
+  if (reg) reg.onclick = () => modalRegistrar(currentMonthKey());
+  const paga = $('#inicio-paga');
+  if (paga) paga.onclick = () => aplicarPaga(mk);
+  const bell = $('#inicio-avisos');
+  if (bell) bell.onclick = () => modalAvisos(avisos);
+}
+
+/* ---- Modal: avisos de Inicio ---- */
+function modalAvisos(avisos) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>Avisos</h3>
+      ${avisos.length
+        ? `<div class="insight-list">${avisos.map((a) => `<div class="insight ${a.tipo === 'alerta' ? 'alert' : ''}"><span class="insight-ico">${a.icono}</span><p>${a.html}</p></div>`).join('')}</div>`
+        : '<div class="empty"><span class="big">✅</span>Todo al día. No tienes avisos nuevos.</div>'}
+      <div class="modal-actions"><button class="btn" id="avisos-cerrar" type="button">Cerrar</button></div>
+    </div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
+  $('#avisos-cerrar', overlay).onclick = cerrar;
+}
+
 /* ============ Vista: Gastos ============ */
 function vistaGastos(view) {
+  view.classList.add('view-gastos');
   const gastos = gastosDelMes(ui.month);
   const total = totalGastado(ui.month);
   const presupuesto = presupuestoTotal();
   const pctGlobal = presupuesto > 0 ? total / presupuesto : null;
   const quedan = presupuesto - total;
-  const saldos = saldosActuales();
   const comp = balancesCompartidos();
   const resumenComp = (comp.debido > 0.004 || comp.debo > 0.004)
-    ? `${comp.debido > 0.004 ? `te deben ${eur(comp.debido)}` : ''}${comp.debido > 0.004 && comp.debo > 0.004 ? ' · ' : ''}${comp.debo > 0.004 ? `debes ${eur(comp.debo)}` : ''}`
-    : 'Controla cenas, regalos y bizums: quién te debe y cuánto';
+    ? `${comp.debido > 0.004 ? `Te deben ${eur(comp.debido)}` : ''}${comp.debido > 0.004 && comp.debo > 0.004 ? ' · ' : ''}${comp.debo > 0.004 ? `Debes ${eur(comp.debo)}` : ''}`
+    : 'Controla cenas, regalos y bizums: quién te debe y cuánto.';
 
-  const resumen = gastos.length ? gastos.reduce((a, g) => a + g.monto, 0) / gastos.length : 0;
+  const catsData = state.categorias
+    .map((c) => ({ ...c, gastado: gastos.filter((g) => g.catId === c.id).reduce((a, g) => a + g.monto, 0) }))
+    .sort((a, b) => b.gastado - a.gastado);
 
-  const filasCategorias = state.categorias
-    .map((c) => {
-      const gastado = gastos.filter((g) => g.catId === c.id).reduce((a, g) => a + g.monto, 0);
-      return { ...c, gastado };
-    })
-    .sort((a, b) => b.gastado - a.gastado)
-    .map((c) => {
-      const pct = c.presupuesto > 0 ? c.gastado / c.presupuesto : null;
-      const cls = pctClass(pct);
-      let barra = '';
-      if (c.presupuesto > 0) {
-        const sobre = pct > 1;
-        barra = `<div class="progress ${pct > 1 ? 'over' : pct > 0.7 ? 'warn' : ''}"><span style="width:${Math.min(pct * 100, 100)}%"></span></div>`;
-        return `
-          <div class="cat-row">
-            <span class="cat-name"><span class="dot" style="background:${c.color}"></span>${escapeHtml(c.nombre)}</span>
-            <span class="pct ${cls}">${pct == null ? '' : fmtPct(pct, { conSigno: false, decimales: 0 })}</span>
-            <span class="cat-amounts"><strong>${eur(c.gastado)}</strong> de ${eur(c.presupuesto, 0)}${sobre ? ` · <strong class="pct-bad">te pasaste ${eur(c.gastado - c.presupuesto)}</strong>` : ` · quedan ${eur(Math.max(c.presupuesto - c.gastado, 0), 0)}`}</span>
-            ${barra}
-          </div>`;
-      }
-      return `
-        <div class="cat-row">
-          <span class="cat-name"><span class="dot" style="background:${c.color}"></span>${escapeHtml(c.nombre)}</span>
-          <span></span>
-          <span class="cat-amounts"><strong>${eur(c.gastado)}</strong> · sin presupuesto</span>
-        </div>`;
-    })
-    .join('');
+  const pctTxt = pctGlobal == null ? '—' : `${Math.round(pctGlobal * 100)} %`;
+  const anillo = anilloProgreso(pctGlobal, { size: 82, grosor: 8, label: pctTxt });
+  const restanteTxt = presupuesto > 0
+    ? (quedan >= 0 ? `Te quedan ${eur(quedan)}` : `Excedido ${eur(-quedan)}`)
+    : 'Sin presupuesto definido';
+
+  const filasCategorias = catsData.map((c) => {
+    const pct = c.presupuesto > 0 ? c.gastado / c.presupuesto : null;
+    const cls = pct == null ? '' : pct > 1 ? 'pct-bad' : pct > 0.7 ? 'pct-warn' : 'pct-good';
+    const barCls = pct == null ? '' : pct > 1 ? 'over' : pct > 0.7 ? 'warn' : '';
+    return `<div class="cat-row">
+      <span class="cat-ico" style="background:${c.color}1a;border-color:${c.color}2e;color:${c.color}">${iconoCategoria(c.nombre, 18)}</span>
+      <div class="cat-main">
+        <div class="cat-name">${escapeHtml(c.nombre)}</div>
+        <div class="cat-sub"><strong>${eur(c.gastado)}</strong>${c.presupuesto > 0 ? ` <span>/ ${eur(c.presupuesto)}</span>` : ' <span>· sin límite</span>'}</div>
+      </div>
+      <div class="cat-right"><strong class="${cls}">${pct == null ? '—' : fmtPct(pct, { conSigno: false, decimales: 0 })}</strong></div>
+      ${c.presupuesto > 0 ? `<div class="progress ${barCls}"><span style="width:${Math.min(pct * 100, 100)}%"></span></div>` : ''}
+    </div>`;
+  }).join('');
 
   const dias = {};
   for (const g of gastos) (dias[g.fecha] = dias[g.fecha] || []).push(g);
-
   const lista = Object.keys(dias).length === 0
-    ? `<div class="empty"><span class="big">🗂️</span>Aún no hay gastos en ${fmtMes(ui.month).toLowerCase()}.<br>Usa el botón de abajo para añadir el primero.</div>`
+    ? `<div class="empty"><span class="big">🗂️</span>Aún no hay gastos en ${fmtMes(ui.month).toLowerCase()}.<br>Usa el botón «Añadir gasto» para registrar el primero.</div>`
     : Object.keys(dias).sort().reverse().map((d) => `
       <div class="day-group">
         <div class="day-label">${fmtDia(d)}</div>
         ${dias[d].map((g) => {
           const cat = catPorId(g.catId);
-          return `
-          <div class="exp-item" data-edit="${g.id}" role="button" tabindex="0" aria-label="Editar gasto">
+          return `<div class="exp-item" data-edit="${g.id}" role="button" tabindex="0" aria-label="Editar gasto">
             <span class="dot" style="background:${cat ? cat.color : '#64748b'}"></span>
             <div class="exp-main">
               <div class="exp-note">${escapeHtml(g.nota || 'Gasto')}</div>
@@ -698,52 +1095,57 @@ function vistaGastos(view) {
       </div>`).join('');
 
   view.innerHTML = `
-    ${cabecera('Gastos')}
-    <div class="row-split" style="margin:0 4px 8px">
-      <h2>Tu dinero ahora</h2>
-      <button class="btn secondary small" id="mini-ver" type="button" style="padding:5px 10px;font-size:0.78rem">Ver desglose ›</button>
-    </div>
-    <div class="card" style="padding:2px 16px;margin-bottom:12px">
-      <div class="money-row">
-        <div><div class="lbl">Ibercaja</div><div class="sub">Día a día</div></div>
-        <div class="val">${eur(saldos.diaadia)}</div>
-      </div>
-      <div class="money-row">
-        <div><div class="lbl">Trade Republic · efectivo</div><div class="sub">Colchón ${eur0(saldos.colchon)} · Ahorro ${eur0(saldos.ahorro)}</div></div>
-        <div class="val">${eur(saldos.efectivoTR)}</div>
-      </div>
-      <div class="money-row">
-        <div><div class="lbl">Trade Republic · inversión</div><div class="sub">ETF en cartera</div></div>
-        <div class="val">${eur(saldos.inversion)}</div>
-      </div>
-    </div>
-    <div class="card" style="padding:12px 14px;margin-bottom:12px">
-      <div class="row-split">
-        <div>
-          <strong>🤝 Compartidos y Bizum</strong>
-          <div class="hint" style="margin-top:2px">${resumenComp}</div>
+    <header class="page-head gastos-head">
+      <h1>Gastos</h1>
+      ${monthNavHTML()}
+    </header>
+
+    <div class="content-grid gastos-grid">
+      <div class="stack">
+        <section class="card gastos-summary">
+          ${anillo}
+          <div class="gastos-summary-copy">
+            <div class="gastos-spent">${eur(total)}</div>
+            <div class="gastos-budget">de ${eur(presupuesto)}</div>
+            <div class="gastos-remaining ${quedan < 0 ? 'pct-bad' : ''}">${restanteTxt}</div>
+          </div>
+        </section>
+
+        <section class="card gastos-cats-card">
+          <div class="card-head gastos-cats-head">
+            <div><h2>Por categoría</h2></div>
+            <button class="card-link" data-nav="ajustes" type="button">Editar límites ${icono('chevron', 13)}</button>
+          </div>
+          <div class="cat-list gastos-cat-list">${filasCategorias || '<div class="empty">Crea categorías en Ajustes.</div>'}</div>
+        </section>
+
+        <div class="gastos-cta-dock">
+          <button class="btn gastos-add-btn" id="btn-add-gasto" type="button">${icono('mas', 18)} Añadir gasto</button>
         </div>
-        <button class="btn secondary small" id="btn-comp" type="button">Abrir</button>
+      </div>
+
+      <div class="stack">
+        <section class="card">
+          <div class="card-head">
+            <div><h2>Detalle del mes</h2><p>${gastos.length} ${gastos.length === 1 ? 'movimiento' : 'movimientos'} en ${fmtMes(ui.month).toLowerCase()}</p></div>
+          </div>
+          ${lista}
+        </section>
+
+        <section class="card">
+          <div class="card-head" style="margin-bottom:12px">
+            <div><h2>${icono('compartido', 17)} Compartidos y Bizum</h2><p>${resumenComp}</p></div>
+          </div>
+          <button class="btn secondary full" id="btn-comp" type="button">Abrir compartidos ${icono('flecha', 15)}</button>
+        </section>
       </div>
     </div>
-    <div class="card">
-      <div class="card-title"><span>Presupuesto del mes</span><span class="${pctClass(pctGlobal)}" style="text-transform:none;font-size:1rem">${pctGlobal == null ? '' : fmtPct(pctGlobal, { conSigno: false })}</span></div>
-      <div class="row-split"><span class="big-number">${eur(total)}</span><span class="sub-number">de ${eur(presupuesto, 0)}</span></div>
-      <div class="progress ${pctGlobal > 1 ? 'over' : pctGlobal > 0.7 ? 'warn' : ''}" style="margin-top:10px"><span style="width:${Math.min((pctGlobal || 0) * 100, 100)}%"></span></div>
-      <div class="sub-number" style="margin-top:8px">${quedan >= 0 ? `Te quedan ${eur(quedan)} de margen` : `Te has pasado ${eur(Math.abs(quedan))}`}${gastos.length ? ` · gasto medio ${eur(resumen)}` : ''}</div>
-    </div>
-    <h2 style="margin:4px 4px 10px">¿Dónde se te va el dinero?</h2>
-    <div class="cat-list">${filasCategorias || '<div class="empty">Crea categorías en Ajustes.</div>'}</div>
-    <h2 style="margin:18px 4px 10px">Detalle del mes</h2>
-    ${lista}
-    <div style="height:8px"></div>
-    <button class="btn full" id="btn-add-gasto" type="button">+ Añadir gasto</button>
   `;
 
   cablearMesNav();
-  $('#btn-add-gasto').onclick = () => modalGasto(null);
-  const miniVer = $('#mini-ver');
-  if (miniVer) miniVer.onclick = () => irTab('patrimonio');
+  cablearNavegacion(view);
+  const add = $('#btn-add-gasto');
+  if (add) add.onclick = () => modalGasto(null);
   const btnComp = $('#btn-comp');
   if (btnComp) btnComp.onclick = () => irTab('compartidos');
   view.querySelectorAll('[data-edit]').forEach((el) => {
@@ -858,61 +1260,33 @@ async function comprobarVersionPublicada() {
   }
 }
 
-/* ============ Vista: Objetivo Casa ============ */
-function vistaObjetivo(view) {
+/* ============ Vista: Objetivos ============ */
+function vistaObjetivos(view) {
   const v = datosVivienda();
-  const pct = v.objetivo > 0 ? Math.min(v.fondo / v.objetivo, 1) : 0;
-  const pctReal = v.objetivo > 0 ? v.fondo / v.objetivo : 0;
-  const completado = pctReal >= 1;
+  const pctCasa = v.objetivo > 0 ? Math.min(v.fondo / v.objetivo, 1) : 0;
+  const pctCasaReal = v.objetivo > 0 ? v.fondo / v.objetivo : 0;
+  const completado = pctCasaReal >= 1;
 
-  const barraPct = (pct * 100).toFixed(1).replace('.', ',') + ' %';
-
-  let ritmo = '';
-  if (v.llegada) {
-    ritmo = `<div class="sub-number" style="margin-top:8px">Aportando <strong>${eur0(v.aporteMes)}/mes</strong> (${eur0(v.planMes)} plan${v.margen > 0 ? ' + ' + eur0(v.margen) + ' margen' : ''} + ${eur0(v.extraAnual / 12)} pagas prorrateadas), completas la entrada en <strong>${fmtMes(v.llegada)}</strong>.</div>`;
-  } else if (v.faltan > 0) {
-    ritmo = `<div class="sub-number" style="margin-top:8px">Define una aportación mensual al fondo vivienda (en Inversión → Ajustes) para calcular cuándo llegarías.</div>`;
-  }
-
-  let fechaObjLinea = '';
-  if (v.fechaObj && v.fondoEnFecha != null && v.objetivo > 0) {
-    fechaObjLinea = v.cumple
-      ? `<div class="sub-number pct-good">Con fecha objetivo ${fmtMes(v.fechaObj)}: tendrías <strong>${eur0(v.fondoEnFecha)}</strong> · objetivo cubierto ✅</div>`
-      : `<div class="sub-number">Con fecha objetivo ${fmtMes(v.fechaObj)}: tendrías <strong>${eur0(v.fondoEnFecha)}</strong> · faltarían ${eur0(Math.max(v.objetivo - v.fondoEnFecha, 0))} para el objetivo.</div>`;
-  }
-
-  // Avisos con las reglas del informe (plan_financiero_vivienda_28_30)
-  const avisoVivienda = (() => {
-    const tips = [];
-    if (v.fondo >= 25000) {
-      tips.push('Se cruzó el umbral de 25.000–30.000 € del informe: es el momento de estudiar depósitos o fondos monetarios para el fondo vivienda.');
-    }
-    const mesesPara = v.fechaObj ? Math.max(monthsBetween(currentMonthKey(), v.fechaObj), 0) : null;
-    if (mesesPara != null && mesesPara > 24 && mesesPara <= 36) {
-      tips.push('Faltan 24–36 meses para la fecha objetivo (regla 6 del informe): empieza a reducir progresivamente el riesgo del dinero de la entrada.');
-    } else if (mesesPara != null && mesesPara <= 24) {
-      tips.push('Faltan menos de 24 meses para la fecha objetivo: según el informe, el efectivo de la entrada debería estar ya en seguro, sin bolsa.');
-    }
-    // Efectivo total en Trade Republic = emergencia + vivienda + viajes (comparten cuenta)
-    const efectivoTR = state.holdings
-      .filter((h) => h.cubo === 'emergencia' || h.cubo === 'vivienda' || h.cubo === 'viajes')
+  const extraGoals = (state.objetivos || []).map((g) => {
+    const cubo = cuboPorId(g.cuboId);
+    const actual = state.holdings
+      .filter((h) => h.cubo === g.cuboId)
       .reduce((a, h) => a + statsHolding(h.id).valorActual, 0);
-    if (efectivoTR >= 80000) {
-      tips.push(`Regla 9 del informe: tienes ${eur0(efectivoTR)} de efectivo en Trade Republic y la garantía cubre 100.000 € por entidad — repártelo entre entidades para quedar por debajo.`);
-    } else if (efectivoTR >= 45000) {
-      tips.push(`Regla de los 45.000 € superada (${eur0(efectivoTR)} de efectivo en Trade Republic): el 3,04 % TAE solo cubre hasta 50.000 € y por encima baja. Abre MyInvestor y traslada el exceso del fondo vivienda a un fondo monetario en euros; la emergencia se queda en Trade Republic.`);
-    } else if (efectivoTR >= 40000) {
-      tips.push(`El efectivo de Trade Republic (${eur0(efectivoTR)}) se acerca a los 45.000 € de la regla del informe: cuando la cruces, abre MyInvestor y mueve el exceso del fondo vivienda a un fondo monetario (la emergencia se queda).`);
-    }
-    if (!tips.length) return '';
-    return `<div class="card" style="border-color:var(--gold)"><div class="card-title"><span>📌 Avisos del plan</span></div>${tips.map((t) => `<div class="sub-number" style="margin:6px 0">• ${t}</div>`).join('')}</div>`;
-  })();
+    const plan = state.holdings
+      .filter((h) => h.cubo === g.cuboId)
+      .reduce((a, h) => a + (+h.plan || 0), 0);
+    const monto = +g.monto || 0;
+    const faltan = Math.max(monto - actual, 0);
+    const pct = monto > 0 ? Math.min(actual / monto, 1) : 0;
+    const meses = faltan > 0 && plan > 0 ? Math.ceil(faltan / plan) : null;
+    const llegada = meses ? addMonths(currentMonthKey(), meses) : null;
+    return { ...g, cubo, actual, plan, monto, faltan, pct, meses, llegada, color: colorCubo(g.cuboId) };
+  });
 
-  // Proyección: acumulación de aportaciones, sin intereses (como en el informe)
+  // Proyección del fondo vivienda (aportaciones sin intereses)
   const filasProyeccion = [];
   for (let anio = 1; anio <= 5; anio++) {
-    const f = v.fondo + v.aporteMes * 12 * anio;
-    filasProyeccion.push({ label: `${anio} año${anio > 1 ? 's' : ''}`, fondo: f });
+    filasProyeccion.push({ label: `${anio} año${anio > 1 ? 's' : ''}`, fondo: v.fondo + v.aporteMes * 12 * anio });
   }
   if (v.fechaObj && v.mesesHastaObj != null && v.objetivo > 0) {
     filasProyeccion.push({ label: `${fmtMes(v.fechaObj)} (objetivo)`, fondo: v.fondo + v.aporteMes * v.mesesHastaObj, especial: true });
@@ -922,221 +1296,300 @@ function vistaObjetivo(view) {
     return `<tr><td>${r.label}</td><td>${eur0(r.fondo)}</td><td>${v.objetivo > 0 ? `${(p * 100).toFixed(0)} %` : '—'}</td></tr>`;
   }).join('');
 
-  const desglose = `
-    <div class="field"><label for="ob-precio">Precio de la vivienda (€)</label>
-      <input id="ob-precio" type="text" inputmode="decimal" value="${String(v.precio).replace('.', ',')}" /></div>
-    <div class="field"><label for="ob-fecha">Fecha de compra</label>
-      <input id="ob-fecha" type="month" value="${v.fechaObj || ''}" /></div>
-    <div class="field-row" style="margin-bottom:0">
-      <div class="field"><label for="ob-entrada">% de entrada</label>
-        <input id="ob-entrada" type="text" inputmode="decimal" value="${String(v.pctEntrada).replace('.', ',')}" /></div>
-      <div class="field"><label for="ob-gastos">% de gastos (10–12)</label>
-        <input id="ob-gastos" type="text" inputmode="decimal" value="${String(v.pctGastos).replace('.', ',')}" /></div>
-    </div>
-    <div class="field"><label for="ob-margen">Margen extra al mes (€)</label>
-      <input id="ob-margen" type="text" inputmode="decimal" value="${String(v.margen).replace('.', ',')}" /></div>
-    <p class="hint">Pagas extra al fondo vivienda: <strong>${eur0(v.extraAnual)}/año</strong> (según Ajustes → Pagas extra; ya están incluidas en el ritmo).</p>
-    <p class="hint">Según el informe: entrada = 20 % del precio (hipoteca del 80 %) más un 10–12 % de impuestos y gastos. Ejemplo del informe: vivienda de ${eur0(v.precio)} → efectivo orientativo ≈ ${eur0(v.precio * 0.2)} (entrada) + ${eur0(v.precio * 0.10)}–${eur0(v.precio * 0.12)} (gastos) = objetivo ≈ ${eur0(v.precio * 0.30)}–${eur0(v.precio * 0.32)}. La reserva de emergencia y el día a día <strong>no</strong> cuentan para la entrada.</p>
-  `;
-
-  view.innerHTML = `
-    ${cabecera('Objetivo: Casa', false)}
-    <div class="card">
-      <div class="card-title"><span>Entrada para la vivienda</span>
-        <span class="${completado ? 'pct-good' : ''}" style="text-transform:none;font-size:1rem">${v.objetivo > 0 ? barraPct : '—'}</span></div>
-      ${completado
-        ? `<div class="big-number pct-good">🎉 Objetivo alcanzado</div>`
-        : `<div class="row-split"><span class="big-number">${eur(v.fondo, 0)}</span><span class="sub-number">de ${eur0(v.objetivo)}</span></div>`}
-      <div class="progress lg ${completado ? '' : ''}" style="margin-top:10px"><span style="width:${pct * 100}%"></span></div>
-      ${completado ? '' : `<div class="sub-number" style="margin-top:8px">Faltan <strong>${eur0(v.faltan)}</strong></div>`}
-      ${ritmo}
-      ${fechaObjLinea}
-    </div>
-
-    ${avisoVivienda}
-
-    <details class="card" ${ui.objetivoAbierto ? 'open' : ''} id="ob-detalles">
-      <summary><span class="card-title" style="margin:0">Ajustar el objetivo</span><span class="chev">⌄</span></summary>
-      <div style="margin-top:14px">${desglose}</div>
-    </details>
-
-    <h2 style="margin:18px 4px 10px">Proyección del fondo vivienda</h2>
-    <table class="card table"><thead><tr><th>Horizonte</th><th>Fondo estimado</th><th>Del objetivo</th></tr></thead><tbody>${proyeccion}</tbody></table>
-    <p class="hint" style="margin-top:8px">Proyección de aportaciones sin contar intereses, como en el informe. La barra crece con los valores reales que registres en «Inversión».</p>
-  `;
-
-  const guardarNum = (id, clave, { min = 0, max = Infinity, entero = false } = {}) => {
-    $(id).addEventListener('change', (e) => {
-      let n = parseAmount(e.target.value);
-      if (n == null) { render(); return; }
-      n = Math.min(Math.max(n, min), max);
-      if (entero) n = Math.round(n);
-      state.ajustes.objetivoCasa[clave] = n;
-      state.ajustes.mod = Date.now();
-      guardarEstado();
-      toast('Objetivo actualizado');
-      render();
-    });
-  };
-  guardarNum('#ob-precio', 'precio');
-  guardarNum('#ob-entrada', 'pctEntrada', { max: 100 });
-  guardarNum('#ob-gastos', 'pctGastos', { max: 100 });
-  guardarNum('#ob-margen', 'margen');
-  $('#ob-fecha').addEventListener('change', (e) => {
-    state.ajustes.objetivoCasa.fechaObjetivo = e.target.value || null;
-    state.ajustes.mod = Date.now();
-    guardarEstado();
-    render();
-  });
-  const detalles = $('#ob-detalles');
-  if (detalles) detalles.addEventListener('toggle', () => { ui.objetivoAbierto = detalles.open; });
-}
-
-/* ============ Vista: Inversión ============ */
-function vistaInversion(view) {
-  const stats = statsPatrimonio();
-  const registrado = !!snapPorMes(ui.month);
-  const mesActual = currentMonthKey();
-  const faltaMesActual = !snapPorMes(mesActual);
-
-  const banner = faltaMesActual
-    ? `<div class="banner">
-        <span>📅</span>
-        <div class="banner-text"><strong>Compra mensual</strong>
-        Recuerda registrar el valor de tus inversiones en el <strong>1 de ${fmtMes(mesActual).toLowerCase()}</strong>, justo en el momento de aportar.</div>
-        <button class="btn small" id="btn-registrar" type="button">Registrar</button>
-      </div>`
-    : !registrado
-      ? `<div class="banner" style="border-color:var(--border);background:var(--card)">
-          <span>📅</span>
-          <div class="banner-text"><strong>${fmtMes(ui.month)} sin registrar</strong>
-          No hay valores guardados de este mes. Toca «Registrar» para añadirlos o corregirlos.</div>
-          <button class="btn small secondary" id="btn-registrar" type="button">Registrar</button>
-        </div>`
-      : '';
-
-  // Paga extra del mes seleccionado
-  let bannerPaga = '';
-  const pg = pagasConfig();
-  const importePaga = +pg.importe || 0;  if (pg.activo && importePaga > 0 && esMesDePaga(ui.month)) {
-    const snapSel = snapPorMes(ui.month);
-    const porCubo = {};
-    for (const r of repartoPaga(importePaga)) porCubo[r.cubo] = (porCubo[r.cubo] || 0) + r.monto;
-    const detalle = Object.entries(porCubo)
-      .map(([cubo, monto]) => `${eur0(monto)} ${cuboPorId(cubo)?.nombre || cubo}`)
-      .join(' · ');
-    if (!snapSel) {
-      bannerPaga = `<div class="banner" style="border-color:var(--gold);background:linear-gradient(120deg,rgba(245,158,11,.16),rgba(16,185,129,.10))">
-        <span>🎁</span>
-        <div class="banner-text"><strong>Paga extra de ${fmtMes(ui.month).toLowerCase()}</strong>
-        ${eur(importePaga)} → ${detalle}. Al registrar las aportaciones se incluirá sola.</div>
-        <button class="btn small" id="btn-paga-reg" type="button">Registrar</button>
-      </div>`;
-    } else if (!snapSel.pagaAplicada) {
-      bannerPaga = `<div class="banner" style="border-color:var(--gold);background:linear-gradient(120deg,rgba(245,158,11,.16),rgba(16,185,129,.10))">
-        <span>🎁</span>
-        <div class="banner-text"><strong>Paga extra de ${fmtMes(ui.month).toLowerCase()}</strong>
-        ${eur(importePaga)} → ${detalle}. Aún no está sumada en este mes.</div>
-        <button class="btn small" id="btn-paga-aplicar" type="button">Aplicar paga</button>
-      </div>`;
-    } else {
-      bannerPaga = `<div class="banner" style="border-color:var(--border);background:var(--card)">
-        <span>✅</span>
-        <div class="banner-text"><strong>Paga extra aplicada</strong>
-        ${eur(importePaga)} repartidos este mes (${detalle}).</div>
-      </div>`;
-    }
+  // Avisos del plan (mismas reglas que el informe de vivienda)
+  const tips = [];
+  if (v.fondo >= 25000) {
+    tips.push('Se cruzó el umbral de 25.000–30.000 € del informe: es el momento de estudiar depósitos o fondos monetarios para el fondo vivienda.');
+  }
+  const mesesPara = v.fechaObj ? Math.max(monthsBetween(currentMonthKey(), v.fechaObj), 0) : null;
+  if (mesesPara != null && mesesPara > 24 && mesesPara <= 36) {
+    tips.push('Faltan 24–36 meses para la fecha objetivo (regla 6 del informe): empieza a reducir progresivamente el riesgo del dinero de la entrada.');
+  } else if (mesesPara != null && mesesPara <= 24) {
+    tips.push('Faltan menos de 24 meses para la fecha objetivo: según el informe, el efectivo de la entrada debería estar ya en seguro, sin bolsa.');
+  }
+  const efectivoTR = state.holdings
+    .filter((h) => h.cubo === 'emergencia' || h.cubo === 'vivienda' || h.cubo === 'viajes')
+    .reduce((a, h) => a + statsHolding(h.id).valorActual, 0);
+  if (efectivoTR >= 80000) {
+    tips.push(`Regla 9 del informe: tienes ${eur0(efectivoTR)} de efectivo en Trade Republic y la garantía cubre 100.000 € por entidad — repártelo entre entidades para quedar por debajo.`);
+  } else if (efectivoTR >= 45000) {
+    tips.push(`Regla de los 45.000 € superada (${eur0(efectivoTR)} de efectivo en Trade Republic): el 3,04 % TAE solo cubre hasta 50.000 € y por encima baja. Abre MyInvestor y traslada el exceso del fondo vivienda a un fondo monetario en euros; la emergencia se queda en Trade Republic.`);
+  } else if (efectivoTR >= 40000) {
+    tips.push(`El efectivo de Trade Republic (${eur0(efectivoTR)}) se acerca a los 45.000 € de la regla del informe: cuando la cruces, abre MyInvestor y mueve el exceso del fondo vivienda a un fondo monetario (la emergencia se queda).`);
   }
 
-  const inversionActual = state.holdings
-    .filter((h) => h.cubo === 'jubilacion')
-    .reduce((a, h) => a + statsHolding(h.id).valorActual, 0);
-  const avisoInversion = inversionActual <= 0
-    ? `<div class="banner" style="border-color:var(--border);background:var(--card)">
-        <span>🌱</span>
-        <div class="banner-text"><strong>Aún sin inversión en cartera</strong>
-        Todo tu dinero está en cuentas. Cuando hagas tu primera compra del ETF, regístrala con «Registrar» y aparecerá aquí y en tu patrimonio.</div>
-      </div>`
-    : '';
+  const avisosHtml = tips.length ? `
+    <section class="card">
+      <div class="card-head">
+        <div><h2>Avisos del plan</h2><p>Reglas que conviene no perder de vista</p></div>
+        <span class="mini-icon" style="color:var(--gold);background:rgba(245,196,81,.12);border-color:rgba(245,196,81,.18)">${icono('alerta', 18)}</span>
+      </div>
+      <div class="insight-list">
+        ${tips.map((t) => `<div class="insight alert"><span class="insight-ico">${icono('alerta', 15)}</span><p>${t}</p></div>`).join('')}
+      </div>
+    </section>` : '';
 
-  const holdings = state.holdings.map((h) => {
-    const st = statsHolding(h.id);
-    const cubo = cuboPorId(h.cubo);
-    const perf = perfHolding(h.id, ui.month);
-    const valores = st.serie.map((s) => s.post);
-    return `
-      <div class="holding-card" data-open="${h.id}" role="button" tabindex="0">
-        <div class="holding-head">
-          <strong>${escapeHtml(h.nombre)}</strong>
-          <span class="tag">${escapeHtml(cubo ? cubo.nombre : '—')}</span>
+  const extraCards = extraGoals.map((g) => `
+    <article class="goal-card ${extraGoals.length === 1 ? 'span-2' : ''}">
+      <div class="goal-top">
+        <div class="goal-icon" style="color:${g.color};background:${g.color}1f;border-color:${g.color}33">${g.icono ? icono(g.icono, 22) : iconoCubo(g.cuboId)}</div>
+        <div class="goal-info">
+          <span class="card-eyebrow">${escapeHtml(g.cubo ? g.cubo.nombre : 'Objetivo')}</span>
+          <h2>${escapeHtml(g.nombre)}</h2>
+          <div class="goal-date">${icono('calendario', 13)} ${g.fecha ? `Fecha objetivo ${fmtMes(g.fecha)}` : 'Sin fecha objetivo'}</div>
         </div>
-        <div class="row-split">
-          <span class="big-number" style="font-size:1.5rem">${eur(st.valorActual)}</span>
-          ${st.serie.length > 1 ? sparkDatos(valores) : ''}
-        </div>
-        <div class="holding-values">
-          <div class="hold-stat"><div class="label">Aportado</div><div class="value">${eur(st.aportado)}</div></div>
-          <div class="hold-stat"><div class="label">Rentab. total</div><div class="value ${st.roi != null && st.roi >= 0 ? 'pct-good' : 'pct-bad'}">${fmtPct(st.roi)}</div></div>
-          <div class="hold-stat"><div class="label">Var. ${MESES_CORTOS[+ui.month.split('-')[1] - 1]}</div><div class="value ${perf != null && perf >= 0 ? 'pct-good' : perf != null ? 'pct-bad' : ''}">${fmtPct(perf)}</div></div>
-        </div>
-      </div>`;
-  }).join('');
-
-  const historial = mesesRegistrados().slice().reverse().map((mk) => {
-    const s = snapPorMes(mk);
-    const serie = stats.serie.find((x) => x.month === mk);
-    const perf = serie && stats.serie.indexOf(serie) > 0 && stats.serie[stats.serie.indexOf(serie) - 1].post > 0
-      ? (serie.valor - stats.serie[stats.serie.indexOf(serie) - 1].post) / stats.serie[stats.serie.indexOf(serie) - 1].post
-      : null;
-    const aportes = Object.values(s.aportes).reduce((a, b) => a + (+b || 0), 0);
-    return `
-      <div class="history-item" data-mes="${mk}" role="button" tabindex="0">
-        <span class="m">${fmtMes(mk)}</span>
-        <span class="c">${aportes > 0 ? 'aportado ' + eur0(aportes) : 'sin aporte'}</span>
-        <span class="v">${eur0(serie ? serie.post : 0)}</span>
-        <span class="v ${perf >= 0 ? 'pct-good' : perf != null ? 'pct-bad' : ''}" style="min-width:72px;text-align:right">${fmtPct(perf)}</span>
-      </div>`;
-  }).join('');
+        <span class="pill goal-badge">${(g.pct * 100).toFixed(1).replace('.', ',')} %</span>
+      </div>
+      <div class="goal-value-row"><strong>${eur0(g.actual)}</strong><span>de ${eur0(g.monto)}</span></div>
+      <div class="progress"><span style="width:${g.pct * 100}%"></span></div>
+      <div class="goal-stats">
+        <div><span>Aportación</span><strong>${eur0(g.plan)}/mes</strong></div>
+        <div><span>Faltan</span><strong>${eur0(g.faltan)}</strong></div>
+        <div><span>Llegada</span><strong>${g.llegada ? fmtMes(g.llegada) : '—'}</strong></div>
+      </div>
+      <div class="goal-actions">
+        <button class="btn secondary small" data-goal-edit="${g.id}" type="button">${icono('editar', 15)} Editar</button>
+        <button class="icon-btn danger" data-goal-del="${g.id}" type="button" aria-label="Eliminar objetivo">${icono('basura', 16)}</button>
+      </div>
+    </article>`).join('');
 
   view.innerHTML = `
-    ${cabecera('Inversión')}
-    ${banner}
-    ${bannerPaga}
-    ${avisoInversion}
-    <div class="card">
-      <div class="card-title"><span>Patrimonio invertido</span>
-        <span class="${stats.roi >= 0 ? 'pct-good' : 'pct-bad'}" style="font-size:1rem;text-transform:none">${fmtPct(stats.roi)}</span></div>
-      <div class="row-split">
-        <span class="big-number">${eur(stats.total)}</span>
-        ${stats.serie.length > 1 ? sparkDatos(stats.serie.map((s) => s.post)) : ''}
+    <header class="page-head">
+      <div>
+        <span class="eyebrow">Metas a largo plazo</span>
+        <h1>Objetivos</h1>
+        <p class="page-sub">Tu plan de vivienda y las metas que quieras construir.</p>
       </div>
-      <div class="sub-number">Aportado en total: ${eur(stats.aportado)}</div>
-      ${stats.perfMes != null ? `<div class="sub-number">Variación último mes: <strong class="${stats.perfMes >= 0 ? 'pct-good' : 'pct-bad'}">${fmtPct(stats.perfMes)}</strong></div>` : ''}
+      <div class="page-head-actions">
+        <button class="btn" id="ob-nuevo-top" type="button">${icono('mas', 16)} Nuevo objetivo</button>
+      </div>
+    </header>
+
+    <div class="goals-grid">
+      <article class="goal-card primary span-2">
+        <div class="goal-top">
+          <div class="goal-icon gold">${icono('casa', 22)}</div>
+          <div class="goal-info">
+            <span class="card-eyebrow">Objetivo principal</span>
+            <h2>Entrada para la vivienda</h2>
+            <div class="goal-date">${icono('calendario', 13)} ${v.fechaObj ? `Fecha objetivo ${fmtMes(v.fechaObj)}` : 'Sin fecha objetivo'} · ${eur0(v.precio)} de vivienda</div>
+          </div>
+          <span class="pill goal-badge ${completado ? 'good' : ''}">${(pctCasaReal * 100).toFixed(1).replace('.', ',')} %</span>
+        </div>
+        <div class="goal-value-row">
+          <strong>${completado ? '🎉' : eur0(v.fondo)}</strong>
+          <span>${completado ? 'Objetivo alcanzado' : `de ${eur0(v.objetivo)}`}</span>
+        </div>
+        <div class="progress lg"><span style="width:${pctCasa * 100}%"></span></div>
+        <div class="goal-stats">
+          <div><span>Aportación mensual</span><strong>${eur0(v.aporteMes)}</strong></div>
+          <div><span>Faltan</span><strong>${eur0(v.faltan)}</strong></div>
+          <div><span>Llegada estimada</span><strong>${v.llegada ? fmtMes(v.llegada) : '—'}</strong></div>
+        </div>
+        <div class="goal-actions">
+          <button class="btn secondary small" id="ob-casa-editar" type="button">${icono('editar', 15)} Editar objetivo</button>
+          <button class="btn small" id="ob-registrar" type="button">${icono('mas', 15)} Registrar aporte</button>
+        </div>
+      </article>
+
+      ${extraCards}
+
+      ${!extraGoals.length ? `
+      <div class="empty-goal span-2">
+        <strong>Aún no tienes otros objetivos</strong>
+        Crea metas para tu colchón de emergencia, viajes o jubilación y verás su progreso aquí.
+        <br><button class="btn secondary small" id="ob-nuevo-empty" type="button">${icono('mas', 15)} Crear mi primer objetivo</button>
+      </div>` : ''}
     </div>
-    <h2 style="margin:4px 4px 10px">Posiciones</h2>
-    ${holdings || '<div class="empty">Añade posiciones en Ajustes para empezar a registrar valores.</div>'}
-    <h2 style="margin:18px 4px 10px">Historial</h2>
-    <div class="card">${historial || '<div class="empty">Todavía no hay registros.</div>'}</div>
+
+    ${avisosHtml ? `
+    <div class="content-grid" style="margin-top:16px">
+      <div class="stack">${avisosHtml}</div>
+      <div class="stack">
+        <section class="card">
+          <div class="card-head">
+            <div><h2>Proyección del fondo vivienda</h2><p>Aportaciones sin contar intereses, como en el informe</p></div>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Horizonte</th><th>Fondo estimado</th><th>Del objetivo</th></tr></thead>
+              <tbody>${proyeccion}</tbody>
+            </table>
+          </div>
+          <p class="hint">La barra crece con los valores reales que registres en Patrimonio. Las pagas extra ya están incluidas en el ritmo mensual.</p>
+        </section>
+      </div>
+    </div>` : `
+    <section class="card" style="margin-top:16px">
+      <div class="card-head">
+        <div><h2>Proyección del fondo vivienda</h2><p>Aportaciones sin contar intereses, como en el informe</p></div>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Horizonte</th><th>Fondo estimado</th><th>Del objetivo</th></tr></thead>
+          <tbody>${proyeccion}</tbody>
+        </table>
+      </div>
+      <p class="hint">La barra crece con los valores reales que registres en Patrimonio. Las pagas extra ya están incluidas en el ritmo mensual.</p>
+    </section>`}
   `;
 
-  cablearMesNav();
-  const btn = $('#btn-registrar');
-  if (btn) btn.onclick = () => modalRegistrar();
-  const btnPagaReg = $('#btn-paga-reg');
-  if (btnPagaReg) btnPagaReg.onclick = () => modalRegistrar(ui.month);
-  const btnPagaAplicar = $('#btn-paga-aplicar');
-  if (btnPagaAplicar) btnPagaAplicar.onclick = () => aplicarPaga(ui.month);
-  view.querySelectorAll('[data-open]').forEach((el) => {
-    el.onclick = () => {
-      const hid = el.dataset.open;
-      const serie = serieHolding(hid);
-      modalRegistrar(serie.length ? serie[serie.length - 1].month : ui.month);
+  const nuevoTop = $('#ob-nuevo-top');
+  if (nuevoTop) nuevoTop.onclick = () => modalObjetivoNuevo();
+  const nuevoEmpty = $('#ob-nuevo-empty');
+  if (nuevoEmpty) nuevoEmpty.onclick = () => modalObjetivoNuevo();
+  const editarCasa = $('#ob-casa-editar');
+  if (editarCasa) editarCasa.onclick = () => modalObjetivoCasa();
+  const registrar = $('#ob-registrar');
+  if (registrar) registrar.onclick = () => modalRegistrar(currentMonthKey());
+  view.querySelectorAll('[data-goal-edit]').forEach((b) => {
+    b.onclick = () => {
+      const g = (state.objetivos || []).find((x) => x.id === b.dataset.goalEdit);
+      if (g) modalObjetivoNuevo(g);
     };
   });
-  view.querySelectorAll('[data-mes]').forEach((el) => {
-    el.onclick = () => modalRegistrar(el.dataset.mes);
+  view.querySelectorAll('[data-goal-del]').forEach((b) => {
+    b.onclick = () => {
+      const id = b.dataset.goalDel;
+      const g = (state.objetivos || []).find((x) => x.id === id);
+      if (!g) return;
+      if (!confirm(`¿Eliminar el objetivo «${g.nombre}»? Las posiciones y su dinero no se borran.`)) return;
+      tumba('objetivos', id);
+      state.objetivos = state.objetivos.filter((x) => x.id !== id);
+      guardarEstado(); toast('Objetivo eliminado'); render();
+    };
   });
 }
+
+/* ---- Modal: editar objetivo vivienda ---- */
+function modalObjetivoCasa() {
+  const o = state.ajustes.objetivoCasa || {};
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>Editar objetivo: Casa</h3>
+      <div class="form-card">
+        <div class="field"><label for="oc-precio">Precio de la vivienda (€)</label>
+          <input id="oc-precio" type="text" inputmode="decimal" value="${String(o.precio || 0).replace('.', ',')}" /></div>
+        <div class="field"><label for="oc-fecha">Fecha de compra</label>
+          <input id="oc-fecha" type="month" value="${o.fechaObjetivo || ''}" /></div>
+        <div class="field-row">
+          <div class="field"><label for="oc-entrada">% de entrada</label>
+            <input id="oc-entrada" type="text" inputmode="decimal" value="${String(o.pctEntrada ?? 20).replace('.', ',')}" /></div>
+          <div class="field"><label for="oc-gastos">% de gastos (10–12)</label>
+            <input id="oc-gastos" type="text" inputmode="decimal" value="${String(o.pctGastos ?? 11).replace('.', ',')}" /></div>
+        </div>
+        <div class="field"><label for="oc-margen">Margen extra al mes (€)</label>
+          <input id="oc-margen" type="text" inputmode="decimal" value="${String(o.margen || 0).replace('.', ',')}" /></div>
+        <p class="hint">Entrada = 20 % del precio (hipoteca del 80 %) más un 10–12 % de impuestos y gastos. Ejemplo: vivienda de ${eur0(+o.precio || 300000)} → objetivo ≈ ${eur0((+o.precio || 300000) * 0.31)}. La reserva de emergencia y el día a día no cuentan para la entrada.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="oc-cancel" type="button">Cancelar</button>
+        <button class="btn" id="oc-save" type="button">Guardar</button>
+      </div>
+    </div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
+  $('#oc-cancel', overlay).onclick = cerrar;
+  $('#oc-save', overlay).onclick = () => {
+    const precio = parseAmount($('#oc-precio', overlay).value);
+    const pctEntrada = parseAmount($('#oc-entrada', overlay).value);
+    const pctGastos = parseAmount($('#oc-gastos', overlay).value);
+    const margen = parseAmount($('#oc-margen', overlay).value) ?? 0;
+    if (precio == null || precio <= 0) return toast('Introduce un precio válido', 'error');
+    if (pctEntrada == null || pctEntrada < 0 || pctEntrada > 100) return toast('El % de entrada no es válido', 'error');
+    if (pctGastos == null || pctGastos < 0 || pctGastos > 100) return toast('El % de gastos no es válido', 'error');
+    state.ajustes.objetivoCasa = {
+      ...state.ajustes.objetivoCasa,
+      precio,
+      pctEntrada,
+      pctGastos,
+      margen: Math.max(margen, 0),
+      fechaObjetivo: $('#oc-fecha', overlay).value || null,
+    };
+    state.ajustes.mod = Date.now();
+    guardarEstado(); cerrar(); toast('Objetivo actualizado'); render();
+  };
+}
+
+/* ---- Modal: nuevo / editar objetivo ---- */
+function modalObjetivoNuevo(goal = null) {
+  const usados = new Set((state.objetivos || []).filter((x) => x.id !== (goal && goal.id)).map((x) => x.cuboId));
+  const disponibles = state.cubos.filter((c) => c.id !== 'vivienda' && !usados.has(c.id));
+  if (!goal && !disponibles.length) {
+    return toast('Todas las posiciones ya tienen un objetivo. Crea otra posición en Ajustes.', 'error');
+  }
+  const cubos = state.cubos.filter((c) => (goal && c.id === goal.cuboId) || (c.id !== 'vivienda' && !usados.has(c.id)));
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>${goal ? 'Editar objetivo' : 'Nuevo objetivo'}</h3>
+      <div class="form-card">
+        <div class="field"><label for="go-nombre">Nombre del objetivo</label>
+          <input id="go-nombre" type="text" placeholder="Ej.: Colchón de emergencia" value="${goal ? escapeHtml(goal.nombre) : ''}" /></div>
+        <div class="field"><label for="go-cubo">Se calcula con el dinero de…</label>
+          <select id="go-cubo">
+            ${cubos.map((c) => `<option value="${c.id}" ${goal && goal.cuboId === c.id ? 'selected' : ''}>${escapeHtml(c.nombre)}</option>`).join('')}
+          </select>
+          <p class="hint">El progreso usa el valor actual de las posiciones de ese espacio. Puedes cambiarlas en Ajustes → Posiciones de inversión.</p>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="go-monto">Meta (€)</label>
+            <input id="go-monto" type="text" inputmode="decimal" placeholder="0,00" value="${goal ? String(goal.monto || 0).replace('.', ',') : ''}" /></div>
+          <div class="field"><label for="go-fecha">Fecha objetivo</label>
+            <input id="go-fecha" type="month" value="${goal && goal.fecha ? goal.fecha : ''}" /></div>
+        </div>
+        <div class="field">
+          <label for="go-icono">Icono</label>
+          <select id="go-icono">
+            ${[['objetivo', '🎯 Objetivo'], ['escudo', '🛡️ Emergencia'], ['avion', '✈️ Viajes'], ['bolsa', '📈 Jubilación'], ['casa', '🏠 Casa'], ['tarjeta', '💳 Día a día']].map(([k, v]) => `<option value="${k}" ${goal && goal.icono === k ? 'selected' : ''}>${v}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        ${goal ? '<button class="btn danger" id="go-borrar" type="button">Borrar</button>' : ''}
+        <button class="btn secondary" id="go-cancel" type="button">Cancelar</button>
+        <button class="btn" id="go-save" type="button">${goal ? 'Guardar' : 'Crear objetivo'}</button>
+      </div>
+    </div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
+  $('#go-cancel', overlay).onclick = cerrar;
+  $('#go-save', overlay).onclick = () => {
+    const nombre = $('#go-nombre', overlay).value.trim();
+    const cuboId = $('#go-cubo', overlay).value;
+    const monto = parseAmount($('#go-monto', overlay).value);
+    const fecha = $('#go-fecha', overlay).value || null;
+    const iconoElegido = $('#go-icono', overlay).value;
+    if (!nombre) return toast('Ponle un nombre al objetivo', 'error');
+    if (monto == null || monto <= 0) return toast('Introduce una meta válida', 'error');
+    if (!cuboId) return toast('Elige de dónde sale el dinero', 'error');
+    if (goal) {
+      Object.assign(goal, { nombre, cuboId, monto, fecha, icono: iconoElegido });
+      stamp(goal);
+    } else {
+      state.objetivos = state.objetivos || [];
+      state.objetivos.push(stamp({ id: uid(), nombre, cuboId, monto, fecha, icono: iconoElegido, creado: Date.now() }));
+    }
+    guardarEstado(); cerrar(); toast(goal ? 'Objetivo actualizado' : 'Objetivo creado'); render();
+  };
+  if (goal) {
+    $('#go-borrar', overlay).onclick = () => {
+      if (!confirm(`¿Eliminar el objetivo «${goal.nombre}»? Las posiciones y su dinero no se borran.`)) return;
+      tumba('objetivos', goal.id);
+      state.objetivos = state.objetivos.filter((x) => x.id !== goal.id);
+      guardarEstado(); cerrar(); toast('Objetivo eliminado'); render();
+    };
+  }
+}
+
+/* ============ Registro mensual de valores ============ */
 
 /* ---- Modal registrar / editar valores de un mes ---- */
 function modalRegistrar(mk = null) {
@@ -1216,108 +1669,213 @@ function modalRegistrar(mk = null) {
 
 /* ============ Vista: Patrimonio ============ */
 function vistaPatrimonio(view) {
+  view.classList.add('view-patrimonio');
   const stats = statsPatrimonio();
-  const dist = distribucionCubos();
+  const dist = distribucionCubos().filter((b) => b.total > 0).sort((a, b) => b.total - a.total);
   const saldos = saldosActuales();
-  const COLOR_CUBO = { diaadia: '#64748b', emergencia: '#38bdf8', vivienda: '#f59e0b', viajes: '#8b5cf6', jubilacion: '#10b981' };
-
   const ingresos = +state.ajustes.ingreso || 0;
   const gastoMes = totalGastado(currentMonthKey());
-  const aportesMes = (() => {
-    const snapHoy = snapPorMes(currentMonthKey());
-    if (!snapHoy) return null;
-    return Object.values(snapHoy.aportes).reduce((a, b) => a + (+b || 0), 0);
-  })();
+  const aportesMes = aportesSnap(currentMonthKey());
+  const serie = stats.serie;
+  const ultimoMes = stats.ultimo ? stats.ultimo.month : currentMonthKey();
+  const mesActual = currentMonthKey();
+  const snActual = snapPorMes(mesActual);
+  const pagaPendiente = pagasConfig().activo && esMesDePaga(mesActual) && (!snActual || !snActual.pagaAplicada);
+  const faltaMes = !snActual;
+  const variacion = stats.perfMes != null ? stats.perfMes : stats.roi;
+  const variacionEsMes = stats.perfMes != null;
 
-  const barrasCubos = dist.map((b) => {
-    const pct = b.pct;
-    const objetivo = b.objetivo;
-    const dif = objetivo > 0 ? pct - objetivo / 100 : null;
-    return `
-      <div class="bucket-row">
-        <div class="bucket-head">
-          <span class="name"><span class="dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${COLOR_CUBO[b.id] || '#64748b'};margin-right:8px"></span>${escapeHtml(b.nombre)}</span>
-          <span class="amount">${eur(b.total)}</span>
-        </div>
-        <div class="bucket-bar">
-          <span style="width:${(pct * 100).toFixed(1)}%;background:${COLOR_CUBO[b.id] || '#64748b'}"></span>
-        </div>
-        <div class="target">${fmtPct(pct, { conSigno: false, decimales: 1 })} del total${objetivo > 0 ? ` · objetivo ${objetivo} %${dif != null ? (Math.abs(dif) < 0.005 ? ' · en línea ✅' : ` · ${dif < 0 ? 'faltan' : 'exceden'} ${fmtPct(Math.abs(dif), { conSigno: false, decimales: 1 })}`) : ''}` : ''}</div>
-      </div>`;
+  const chart = serie.length > 1
+    ? lineaChart(serie.map((s) => s.post), serie.map((s) => `${MESES_CORTOS[+s.month.split('-')[1] - 1]} ${s.month.slice(2, 4)}`))
+    : '';
+
+  const donut = donutSVG(dist.map((b) => ({ valor: b.total, color: colorCubo(b.id) })), { size: 140, grosor: 22 });
+
+  const leyenda = dist.map((b) => `
+    <div class="pat-legend-row">
+      <span class="pat-legend-dot" style="background:${colorCubo(b.id)}"></span>
+      <span class="pat-legend-name">${escapeHtml(b.nombre)}</span>
+      <span class="pat-legend-pct">${fmtPct(b.pct, { conSigno: false, decimales: 0 })}</span>
+    </div>`).join('');
+
+  const cuentas = state.holdings.map((h) => {
+    const st = statsHolding(h.id);
+    const cubo = cuboPorId(h.cubo);
+    const pct = stats.total > 0 ? st.valorActual / stats.total : null;
+    const color = colorCubo(h.cubo);
+    return `<button class="pat-account-row" type="button" data-open="${h.id}" aria-label="Ver y registrar ${escapeHtml(h.nombre)}">
+      <span class="pat-account-ico" style="color:${color};background:${color}1a;border-color:${color}30">${iconoCubo(h.cubo)}</span>
+      <span class="pat-account-main">
+        <strong class="pat-account-name" title="${escapeHtml(h.nombre)}">${escapeHtml(h.nombre)}</strong>
+        <span class="pat-account-type">${escapeHtml(cubo ? cubo.nombre : 'Sin espacio')}</span>
+        <span class="pat-account-amount">${eur(st.valorActual)}</span>
+      </span>
+      <span class="pat-account-pct">${pct == null ? '—' : fmtPct(pct, { conSigno: false, decimales: 0 })}</span>
+      <span class="pat-account-arrow" aria-hidden="true">${icono('chevron', 15)}</span>
+    </button>`;
   }).join('');
 
-  const serie = stats.serie;
-  const chart = lineaChart(serie.map((s) => s.post), serie.map((s) => `${MESES_CORTOS[+s.month.split('-')[1] - 1]} ${s.month.slice(2, 4)}`));
+  const metricas = state.holdings.map((h) => {
+    const st = statsHolding(h.id);
+    const perf = perfHolding(h.id, ultimoMes);
+    const labelVar = stats.ultimo ? MESES_CORTOS[+ultimoMes.split('-')[1] - 1] : 'mes';
+    return `<div class="pat-metric-row">
+      <div class="pat-metric-name" title="${escapeHtml(h.nombre)}">${escapeHtml(h.nombre)}</div>
+      <div class="pat-metric-values">
+        <span><small>Aportado</small><strong>${eur(st.aportado)}</strong></span>
+        <span><small>Rentab. total</small><strong class="${st.roi != null && st.roi >= 0 ? 'pct-good' : st.roi != null ? 'pct-bad' : ''}">${fmtPct(st.roi)}</strong></span>
+        <span><small>Var. ${labelVar}</small><strong class="${perf != null && perf >= 0 ? 'pct-good' : perf != null ? 'pct-bad' : ''}">${fmtPct(perf)}</strong></span>
+      </div>
+    </div>`;
+  }).join('');
 
-  const tablaMeses = serie.slice().reverse().slice(0, 12).map((s) => {
-    const i = stats.serie.indexOf(s);
-    const prev = i > 0 ? stats.serie[i - 1] : null;
+  const historial = serie.slice().reverse().slice(0, 12).map((s) => {
+    const idx = stats.serie.indexOf(s);
+    const prev = idx > 0 ? stats.serie[idx - 1] : null;
     const perf = prev && prev.post > 0 ? (s.valor - prev.post) / prev.post : null;
-    const aportes = (() => {
-      const snap = snapPorMes(s.month);
-      return Object.values(snap.aportes).reduce((a, b) => a + (+b || 0), 0);
-    })();
-    return `<tr><td>${fmtMes(s.month)}</td><td class="${perf >= 0 ? 'pct-good' : perf != null ? 'pct-bad' : ''}">${fmtPct(perf)}</td><td>${eur0(aportes)}</td><td>${eur0(s.post)}</td></tr>`;
+    const sn = snapPorMes(s.month);
+    const aportes = sn ? Object.values(sn.aportes || {}).reduce((a, b) => a + (+b || 0), 0) : 0;
+    const cls = perf != null && perf >= 0 ? 'pct-good' : perf != null ? 'pct-bad' : '';
+    return `<div class="pat-history-row" data-mes="${s.month}" role="button" tabindex="0" aria-label="Editar ${escapeHtml(fmtMes(s.month))}">
+      <div class="pat-history-top"><strong>${fmtMes(s.month)}</strong><span>${eur0(s.post)}</span></div>
+      <div class="pat-history-bottom">
+        <span>Variación <strong class="${cls}">${fmtPct(perf)}</strong></span>
+        <span>Aporte <strong>${eur0(aportes)}</strong></span>
+      </div>
+    </div>`;
   }).join('');
 
   view.innerHTML = `
-    ${cabecera('Patrimonio', false)}
-    <div class="card">
-      <div class="card-title"><span>Patrimonio total (todo junto)</span>
-        <span class="${stats.roi >= 0 ? 'pct-good' : 'pct-bad'}" style="text-transform:none;font-size:1rem">${fmtPct(stats.roi)}</span></div>
-      <div class="row-split">
-        <span class="big-number">${eur(stats.total)}</span>
-        ${serie.length > 1 ? sparkDatos(serie.map((s) => s.post), { w: 110 }) : ''}
+    <header class="page-head pat-head">
+      <h1>Patrimonio</h1>
+      <button class="icon-btn pat-reg-btn" id="pat-registrar" type="button" aria-label="Registrar valores" title="Registrar valores">${icono('editar', 18)}</button>
+    </header>
+
+    ${pagaPendiente ? `
+    <div class="banner">
+      <span class="banner-ico">${icono('calendario', 19)}</span>
+      <div class="banner-text"><strong>Paga extra de ${fmtMes(mesActual).toLowerCase()}</strong>${eur(+pagasConfig().importe || 0)} pendiente de aplicar a tus aportaciones.</div>
+      <button class="btn small" id="pat-banner-btn" type="button">Aplicar paga</button>
+    </div>` : faltaMes ? `
+    <div class="banner" style="border-color:var(--border);background:var(--card)">
+      <span class="banner-ico">${icono('calendario', 19)}</span>
+      <div class="banner-text"><strong>${fmtMes(mesActual)} sin registrar</strong>Añade los valores del día 1 para mantener actualizado tu patrimonio.</div>
+      <button class="btn secondary small" id="pat-banner-btn" type="button">Registrar</button>
+    </div>` : ''}
+
+    <div class="pat-layout">
+      <div class="stack">
+        <section class="card pat-total">
+          <span class="pat-total-label">Patrimonio total</span>
+          <div class="pat-total-value">${eur(stats.total)}</div>
+          <div class="pat-total-trend ${variacion == null ? 'neutral' : variacion < 0 ? 'negative' : 'positive'}">
+            ${variacion != null ? `<span class="trend-mark" aria-hidden="true">${variacion < 0 ? '▼' : '▲'}</span>` : ''}
+            <strong>${variacion == null ? '—' : fmtPct(variacion, { decimales: 1 })}</strong>
+            <span>${variacionEsMes ? 'este mes' : variacion != null ? 'desde el inicio' : 'sin datos'}</span>
+          </div>
+        </section>
+
+        <section class="card pat-dist-card" aria-label="Distribución del patrimonio">
+          <div class="pat-dist">
+            <div class="pat-donut">${donut}</div>
+            <div class="pat-legend">${leyenda || '<span class="pat-legend-empty">Sin posiciones registradas.</span>'}</div>
+          </div>
+        </section>
       </div>
-      <div class="sub-number">Aportado en total: ${eur(stats.aportado)}</div>
-      ${stats.perfMes != null ? `<div class="sub-number">Última variación: <strong class="${stats.perfMes >= 0 ? 'pct-good' : 'pct-bad'}">${fmtPct(stats.perfMes)}</strong> (<span id="pat-ultimo-mes">${fmtMes(stats.ultimo.month)}</span>)</div>` : ''}
+
+      <div class="stack">
+        <section class="card pat-accounts-card" aria-label="Cuentas y patrimonio">
+          <div class="pat-account-list">${cuentas || '<div class="empty">Añade posiciones en Ajustes para empezar.</div>'}</div>
+        </section>
+      </div>
     </div>
 
-    <div class="card">
-      <div class="card-title"><span>Dónde está tu dinero</span>
-        <button class="btn secondary small" id="btn-saldos" type="button" style="padding:5px 10px;font-size:0.75rem">Actualizar saldos</button></div>
-      <div class="history-item" style="cursor:default">
-        <span class="m" style="flex:1">Ibercaja<span class="c" style="display:block">Día a día</span></span>
-        <span class="v">${eur(saldos.diaadia)}</span>
-      </div>
-      <div class="history-item" style="cursor:default">
-        <span class="m" style="flex:1">Trade Republic · efectivo<span class="c" style="display:block">Colchón ${eur0(saldos.colchon)} · Ahorro ${eur0(saldos.ahorro)}${saldos.viajes > 0 ? ` (viajes ${eur0(saldos.viajes)})` : ''}</span></span>
-        <span class="v">${eur(saldos.efectivoTR)}</span>
-      </div>
-      <div class="history-item" style="cursor:default">
-        <span class="m" style="flex:1">Trade Republic · inversión<span class="c" style="display:block">ETF en cartera</span></span>
-        <span class="v">${eur(saldos.inversion)}</span>
-      </div>
-      ${saldos.otros > 0.5 ? `<div class="history-item" style="cursor:default"><span class="m" style="flex:1">Otras posiciones</span><span class="v">${eur(saldos.otros)}</span></div>` : ''}
-      <div class="history-item" style="cursor:default;border-top:1px solid var(--border);margin-top:4px">
-        <span class="m" style="flex:1">Total</span>
-        <span class="v">${eur(saldos.total)}</span>
-      </div>
-    </div>
+    <details class="pat-more">
+      <summary class="pat-more-summary">
+        <span class="pat-more-summary-main"><strong>Historial y detalles</strong><span>Evolución, flujo mensual y entidades</span></span>
+        ${icono('chevron', 16)}
+      </summary>
+      <div class="pat-more-body">
+        <div class="pat-more-links">
+          <button class="card-link" data-nav="analisis" type="button">Ver análisis ${icono('flecha', 14)}</button>
+          <button class="card-link" data-nav="objetivos" type="button">Ver objetivos ${icono('flecha', 14)}</button>
+        </div>
 
-    ${serie.length > 1 ? `<div class="card"><div class="card-title"><span>Evolución</span></div><div class="chart-wrap">${chart}</div></div>` : ''}
+        <section class="card">
+          <div class="card-head">
+            <div><h2>Evolución</h2><p>Patrimonio registrado mes a mes</p></div>
+            ${stats.perfMes != null ? `<span class="pill ${stats.perfMes >= 0 ? 'good' : 'bad'}">${fmtPct(stats.perfMes)} último mes</span>` : ''}
+          </div>
+          ${chart ? `<div class="chart-wrap">${chart}</div>` : '<div class="empty" style="padding:18px"><span class="big">📈</span>Registra al menos dos meses para ver la evolución.</div>'}
+        </section>
 
-    <h2 style="margin:4px 4px 10px">Cómo está repartido</h2>
-    <div class="card">${barrasCubos}</div>
+        <section class="card">
+          <div class="card-head">
+            <div><h2>Rentabilidad por posición</h2><p>Aportado total ${eur(stats.aportado)} · toca una cuenta para registrar valores</p></div>
+          </div>
+          <div class="pat-metrics">${metricas || '<div class="empty">Sin posiciones registradas.</div>'}</div>
+        </section>
 
-    <h2 style="margin:18px 4px 10px">Este mes</h2>
-    <div class="stat-grid">
-      <div class="stat"><div class="label">Ingreso mensual</div><div class="value">${eur(ingresos)}</div></div>
-      <div class="stat"><div class="label">Gasto del mes</div><div class="value">${eur(gastoMes)} <span class="pct ${gastoMes > ingresos ? 'pct-bad' : ''}" style="font-size:0.75rem">${ingresos > 0 ? fmtPct(gastoMes / ingresos, { conSigno: false, decimales: 0 }) : ''}</span></div></div>
-      <div class="stat"><div class="label">Aportación este mes</div><div class="value">${aportesMes == null ? 'sin registrar' : eur0(aportesMes)}</div></div>
-      <div class="stat"><div class="label">Sobra estimada</div><div class="value ${ingresos - gastoMes > 0 ? 'pct-good' : ingresos > 0 ? 'pct-bad' : ''}">${ingresos > 0 ? eur(ingresos - gastoMes) : '—'}</div></div>
-    </div>
+        <section class="card">
+          <div class="card-head"><div><h2>Este mes</h2><p>Flujo del mes en curso</p></div></div>
+          <div class="stat-grid two">
+            <div class="stat"><div class="label">Ingreso mensual</div><div class="value">${eur(ingresos)}</div></div>
+            <div class="stat"><div class="label">Gasto del mes</div><div class="value">${eur(gastoMes)} <span class="tiny ${gastoMes > ingresos && ingresos > 0 ? 'pct-bad' : ''}">${ingresos > 0 ? fmtPct(gastoMes / ingresos, { conSigno: false, decimales: 0 }) : ''}</span></div></div>
+            <div class="stat"><div class="label">Aportación</div><div class="value">${aportesMes == null ? 'sin registrar' : eur0(aportesMes)}</div></div>
+            <div class="stat"><div class="label">Sobra estimada</div><div class="value ${ingresos - gastoMes > 0 ? 'pct-good' : ingresos > 0 ? 'pct-bad' : ''}">${ingresos > 0 ? eur(ingresos - gastoMes) : '—'}</div></div>
+          </div>
+        </section>
 
-    <h2 style="margin:18px 4px 10px">Mes a mes</h2>
-    <table class="card table"><thead><tr><th>Mes</th><th>Variación</th><th>Aporte</th><th>Total</th></tr></thead><tbody>${tablaMeses}</tbody></table>
+        <section class="card">
+          <div class="card-head">
+            <div><h2>Tu dinero por entidad</h2><p>Dónde está el dinero ahora mismo</p></div>
+            <button class="btn secondary small" id="pat-saldos" type="button">${icono('editar', 15)} Actualizar</button>
+          </div>
+          <div class="money-row">
+            <div><div class="lbl">Ibercaja</div><div class="sub">Día a día</div></div>
+            <div class="val">${eur(saldos.diaadia)}</div>
+          </div>
+          <div class="money-row">
+            <div><div class="lbl">Trade Republic · efectivo</div><div class="sub">Colchón ${eur0(saldos.colchon)} · Ahorro ${eur0(saldos.ahorro)}${saldos.viajes > 0 ? ` (viajes ${eur0(saldos.viajes)})` : ''}</div></div>
+            <div class="val">${eur(saldos.efectivoTR)}</div>
+          </div>
+          <div class="money-row">
+            <div><div class="lbl">Trade Republic · inversión</div><div class="sub">ETF en cartera</div></div>
+            <div class="val">${eur(saldos.inversion)}</div>
+          </div>
+          ${saldos.otros > 0.5 ? `<div class="money-row"><div><div class="lbl">Otras posiciones</div></div><div class="val">${eur(saldos.otros)}</div></div>` : ''}
+          <div class="money-total"><span>Total</span><strong>${eur(saldos.total)}</strong></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><div><h2>Mes a mes</h2><p>Últimos 12 registros</p></div></div>
+          <div class="pat-history">${historial || '<div class="hint">Todavía no hay registros.</div>'}</div>
+        </section>
+      </div>
+    </details>
   `;
 
-  const btnSaldos = $('#btn-saldos');
-  if (btnSaldos) btnSaldos.onclick = () => modalRegistrar(currentMonthKey());
+  cablearNavegacion(view);
+  ['#pat-registrar', '#pat-saldos'].forEach((sel) => {
+    const b = $(sel);
+    if (b) b.onclick = () => modalRegistrar(mesActual);
+  });
+  const bannerBtn = $('#pat-banner-btn');
+  if (bannerBtn) bannerBtn.onclick = () => pagaPendiente ? aplicarPaga(mesActual) : modalRegistrar(mesActual);
+  view.querySelectorAll('[data-open]').forEach((el) => {
+    el.onclick = () => {
+      const hid = el.dataset.open;
+      const serieH = serieHolding(hid);
+      modalRegistrar(serieH.length ? serieH[serieH.length - 1].month : mesActual);
+    };
+  });
+  view.querySelectorAll('[data-mes]').forEach((el) => {
+    el.onclick = () => modalRegistrar(el.dataset.mes);
+  });
 }
 
 /* === BEGIN-FUSIONAR === */
-const COLECCIONES = ['gastos', 'snapshots', 'categorias', 'holdings', 'cubos', 'personas', 'compartidosEventos', 'bizums'];
+const COLECCIONES = ['gastos', 'snapshots', 'categorias', 'holdings', 'cubos', 'personas', 'compartidosEventos', 'bizums', 'objetivos'];
 
 /* Misma regla que el servidor casero: registro a registro gana el 'mod' más
    reciente; los borrados viajan como lápidas. Se usa con la nube de GitHub
@@ -1668,201 +2226,1043 @@ function actualizarEstadoSync(extra = '') {
 }
 
 /* ============ Vista: Análisis ============ */
-function vistaAnalisis(view) {
-  const n = ui.analisisMeses || 6;
-  const filas = analisisPeriodo(n);
-  const conDatos = filas.filter((f) => f.n > 0);
-  const totalPeriodo = filas.reduce((a, f) => a + f.total, 0);
-  const media = conDatos.length ? totalPeriodo / conDatos.length : 0;
-  const presu = presupuestoTotal();
-  const pctMedia = presu > 0 ? media / presu : null;
-  const masCaro = conDatos.slice().sort((a, b) => b.total - a.total)[0];
-  const mesesPasados = conDatos.filter((f) => presu > 0 && f.total > presu).length;
+const ANALISIS_DESCARTADOS = new Set();
 
-  // Categorías (incluye "sin etiqueta" si hay gastos sueltos)
-  const cats = state.categorias.map((c) => {
-    const serie = filas.map((f) => f.porCat[c.id] || 0);
-    const total = serie.reduce((a, b) => a + b, 0);
-    return { ...c, serie, total, media: conDatos.length ? total / conDatos.length : 0 };
+function analisisPeriodoHasta(finMk, n) {
+  const meses = [];
+  for (let i = n - 1; i >= 0; i--) meses.push(addMonths(finMk, -i));
+  return meses.map((mk) => {
+    const gastos = gastosDelMes(mk);
+    const porCat = { __none: 0 };
+    for (const c of state.categorias) porCat[c.id] = 0;
+    let total = 0;
+    for (const g of gastos) {
+      const id = state.categorias.some((c) => c.id === g.catId) ? g.catId : '__none';
+      porCat[id] = (porCat[id] || 0) + g.monto;
+      total += g.monto;
+    }
+    return { mk, porCat, total, n: gastos.length };
   });
-  const sinEtiqueta = filas.reduce((a, f) => a + (f.porCat.__none || 0), 0);
-  if (sinEtiqueta > 0) {
-    cats.push({ id: '__none', nombre: 'Sin etiqueta', color: '#64748b', presupuesto: 0, serie: filas.map((f) => f.porCat.__none || 0), total: sinEtiqueta, media: conDatos.length ? sinEtiqueta / conDatos.length : 0 });
+}
+
+function esMesEnCursoIncompleto(mk) {
+  if (mk !== currentMonthKey()) return false;
+  const ahora = new Date();
+  const ultimoDia = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0).getDate();
+  return ahora.getDate() < ultimoDia;
+}
+
+function pctSeguro(actual, anterior) {
+  if (!(anterior > 0)) return null;
+  return (actual - anterior) / anterior;
+}
+
+function fmtEurDelta(n) {
+  if (n == null || !isFinite(n)) return '—';
+  if (Math.abs(n) < 0.005) return eur0(0);
+  return `${n > 0 ? '+' : '−'}${eur0(Math.abs(n))}`;
+}
+
+function claseTendencia(p) {
+  if (p == null || !isFinite(p) || Math.abs(p) < 0.02) return 'trend-neutral';
+  return p > 0 ? 'trend-up' : 'trend-down';
+}
+
+function redondear5(n) {
+  if (!isFinite(n)) return 0;
+  return Math.max(0, Math.round(n / 5) * 5);
+}
+
+function mediaYDesviacion(serie) {
+  const valores = serie.filter((n) => isFinite(n));
+  if (!valores.length) return { media: 0, sd: 0, cv: 0 };
+  const media = valores.reduce((a, b) => a + b, 0) / valores.length;
+  const varianza = valores.reduce((a, b) => a + (b - media) ** 2, 0) / valores.length;
+  const sd = Math.sqrt(varianza);
+  return { media, sd, cv: media > 0 ? sd / media : 0 };
+}
+
+function maxBonito(valor) {
+  if (!(valor > 0)) return 1;
+  const potencia = Math.pow(10, Math.floor(Math.log10(valor)));
+  const normalizado = valor / potencia;
+  const paso = [1, 2, 2.5, 5, 10].find((x) => normalizado <= x) || 10;
+  return paso * potencia;
+}
+
+function pluralMeses(n) {
+  return `${n} ${n === 1 ? 'mes' : 'meses'}`;
+}
+
+function construirAnalisis(nPedido) {
+  const n = [3, 6, 12].includes(+nPedido) ? +nPedido : 6;
+  const filasActuales = analisisPeriodo(n);
+  const filasPrevias = analisisPeriodoHasta(addMonths(currentMonthKey(), -n), n);
+  const mesActual = currentMonthKey();
+  const mesActualIncompleto = esMesEnCursoIncompleto(mesActual);
+
+  filasActuales.forEach((f) => { f.incompleto = f.mk === mesActual && mesActualIncompleto; });
+  filasPrevias.forEach((f) => { f.incompleto = false; });
+
+  const actualesCompletos = filasActuales.filter((f) => !f.incompleto);
+  const baseActual = actualesCompletos.length ? actualesCompletos : filasActuales;
+  const basePrevia = filasPrevias.slice(-baseActual.length);
+  const mesesBase = baseActual.filter((f) => f.n > 0);
+  const mesesPreviosBase = basePrevia.filter((f) => f.n > 0);
+
+  const presu = presupuestoTotal();
+  const totalPeriodo = filasActuales.reduce((a, f) => a + f.total, 0);
+  const totalBase = baseActual.reduce((a, f) => a + f.total, 0);
+  const totalPrevio = basePrevia.reduce((a, f) => a + f.total, 0);
+  const media = mesesBase.length ? totalBase / mesesBase.length : 0;
+  const mediaPrevia = mesesPreviosBase.length ? totalPrevio / mesesPreviosBase.length : 0;
+  const masCaro = filasActuales.filter((f) => f.n > 0).sort((a, b) => b.total - a.total)[0] || null;
+  const mesesPorEncima = mesesBase.filter((f) => presu > 0 && f.total > presu + 0.005).length;
+  const comparacionFiable = mesesBase.length >= 1 && mesesPreviosBase.length >= 1;
+  const variacionPeriodo = comparacionFiable ? pctSeguro(media, mediaPrevia) : null;
+  const variacionMedia = comparacionFiable ? pctSeguro(media, mediaPrevia) : null;
+  const tendenciaFiable = mesesBase.length >= 3 && mesesPreviosBase.length >= 2 && baseActual.length >= 3;
+
+  const cats = state.categorias.map((c) => {
+    const presupuesto = +c.presupuesto || 0;
+    const serieBase = mesesBase.map((f) => f.porCat[c.id] || 0);
+    const serieBasePrevia = mesesPreviosBase.map((f) => f.porCat[c.id] || 0);
+    const totalActual = serieBase.reduce((a, b) => a + b, 0);
+    const totalPrevioCat = serieBasePrevia.reduce((a, b) => a + b, 0);
+    const mediaActual = mesesBase.length ? totalActual / mesesBase.length : 0;
+    const mediaPreviaCat = mesesPreviosBase.length ? totalPrevioCat / mesesPreviosBase.length : 0;
+    const delta = mediaActual - mediaPreviaCat;
+    const pct = pctSeguro(mediaActual, mediaPreviaCat);
+    const med = mediana(serieBase);
+    const max = Math.max(...serieBase, 0);
+    const min = Math.min(...serieBase, 0);
+    const cv = mediaYDesviacion(serieBase).cv;
+    const mesesSobre = serieBase.filter((x) => presupuesto > 0 && x > presupuesto + 0.005).length;
+    const mesesConGasto = serieBase.filter((x) => x > 0).length;
+    const mesesPrevioConGasto = serieBasePrevia.filter((x) => x > 0).length;
+    const excesoMedio = serieBase.reduce((a, x) => a + Math.max(x - presupuesto, 0), 0) / Math.max(1, serieBase.length);
+
+    return {
+      ...c,
+      presupuesto,
+      serieBase,
+      serieBasePrevia,
+      totalActual,
+      totalPrevio: totalPrevioCat,
+      mediaActual,
+      mediaPrevia: mediaPreviaCat,
+      delta,
+      pct,
+      med,
+      max,
+      min,
+      cv,
+      mesesSobre,
+      mesesConGasto,
+      mesesPrevioConGasto,
+      excesoMedio,
+    };
+  });
+
+  const sinEtiquetaActual = mesesBase.reduce((a, f) => a + (f.porCat.__none || 0), 0);
+  const sinEtiquetaPrevia = mesesPreviosBase.reduce((a, f) => a + (f.porCat.__none || 0), 0);
+  if (sinEtiquetaActual > 0 || sinEtiquetaPrevia > 0) {
+    const serieBase = mesesBase.map((f) => f.porCat.__none || 0);
+    const serieBasePrevia = mesesPreviosBase.map((f) => f.porCat.__none || 0);
+    cats.push({
+      id: '__none',
+      nombre: 'Sin etiqueta',
+      color: '#64748b',
+      presupuesto: 0,
+      serieBase,
+      serieBasePrevia,
+      totalActual: sinEtiquetaActual,
+      totalPrevio: sinEtiquetaPrevia,
+      mediaActual: mesesBase.length ? sinEtiquetaActual / mesesBase.length : 0,
+      mediaPrevia: mesesPreviosBase.length ? sinEtiquetaPrevia / mesesPreviosBase.length : 0,
+      delta: sinEtiquetaActual - sinEtiquetaPrevia,
+      pct: pctSeguro(sinEtiquetaActual, sinEtiquetaPrevia),
+      med: mediana(serieBase),
+      max: Math.max(...serieBase, 0),
+      min: Math.min(...serieBase, 0),
+      cv: mediaYDesviacion(serieBase).cv,
+      mesesSobre: 0,
+      mesesConGasto: serieBase.filter((x) => x > 0).length,
+      mesesPrevioConGasto: serieBasePrevia.filter((x) => x > 0).length,
+      excesoMedio: 0,
+    });
   }
-  cats.sort((a, b) => b.total - a.total);
 
-  const filasCats = cats.map((c) => {
-    if (c.total <= 0) return '';
-    const pct = c.presupuesto > 0 ? c.media / c.presupuesto : null;
-    const barra = c.presupuesto > 0
-      ? `<div class="progress ${pct > 1 ? 'over' : pct > 0.7 ? 'warn' : ''}"><span style="width:${Math.min(pct * 100, 100)}%"></span></div>`
-      : '';
-    return `
-      <div class="cat-row">
-        <span class="cat-name"><span class="dot" style="background:${c.color}"></span>${escapeHtml(c.nombre)}</span>
-        <span class="pct ${c.presupuesto > 0 ? pctClass(pct) : ''}">${c.presupuesto > 0 ? fmtPct(pct, { conSigno: false, decimales: 0 }) : ''}</span>
-        <span class="cat-amounts">media <strong>${eur(c.media)}</strong>${c.presupuesto > 0 ? ` de ${eur0(c.presupuesto)}` : ' · sin límite'}</span>
-        ${barra}
-      </div>`;
-  }).join('');
+  const catsOrdenadas = cats.slice().sort((a, b) => b.totalActual - a.totalActual);
 
-  // Desviaciones: dónde y cuánto te pasaste
-  const desv = [];
-  for (const f of conDatos) {
-    for (const c of state.categorias) {
-      if (!(c.presupuesto > 0)) continue;
-      const g = f.porCat[c.id] || 0;
-      if (g > c.presupuesto + 0.005) desv.push({ mk: f.mk, c, exceso: g - c.presupuesto, pct: g / c.presupuesto });
+  const cambios = tendenciaFiable
+    ? cats
+      .filter((c) => c.id !== '__none' && (c.totalActual >= 10 || c.totalPrevio >= 10))
+      .filter((c) => (c.pct != null ? Math.abs(c.pct) >= 0.1 && Math.abs(c.delta) >= 5 : c.delta >= 15))
+      .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+      .slice(0, 5)
+    : [];
+
+  const datos = {
+    n,
+    filasActuales,
+    filasPrevias,
+    baseActual,
+    basePrevia,
+    mesesBase,
+    mesesPreviosBase,
+    presu,
+    totalPeriodo,
+    totalBase,
+    totalPrevio,
+    media,
+    mediaPrevia,
+    masCaro,
+    mesesPorEncima,
+    variacionPeriodo,
+    variacionMedia,
+    comparacionFiable,
+    tendenciaFiable,
+    mesActualIncompleto,
+    cats: catsOrdenadas,
+    cambios,
+  };
+
+  datos.propuestas = construirPropuestasPresupuesto(datos);
+  datos.conclusiones = construirConclusionesAnalisis(datos);
+  datos.plan = construirPlanAnalisis(datos);
+  return datos;
+}
+
+function construirPropuestasPresupuesto(d) {
+  const vacio = {
+    suficiente: false,
+    propuestas: [],
+    totalDelta: 0,
+    totalNuevo: presupuestoTotal(),
+    ahorro: 0,
+    coste: 0,
+    irregulares: [],
+    evaluadas: 0,
+  };
+  if (d.mesesBase.length < 3) return vacio;
+
+  const numMeses = d.mesesBase.length;
+  const propuestas = [];
+  const irregulares = [];
+
+  for (const c of d.cats) {
+    if (c.id === '__none') continue;
+    const presupuesto = c.presupuesto;
+    const serie = c.serieBase;
+    const total = serie.reduce((a, b) => a + b, 0);
+    const media = total / numMeses;
+    const med = mediana(serie);
+    const max = Math.max(...serie, 0);
+    const cv = mediaYDesviacion(serie).cv;
+    const mesesSobre = serie.filter((x) => presupuesto > 0 && x > presupuesto + 0.005).length;
+    const mesesConGasto = serie.filter((x) => x > 0).length;
+
+    const confianza = numMeses >= 6 && mesesConGasto >= 3 && cv <= 0.35
+      ? 'alta'
+      : numMeses >= 3 && mesesConGasto >= 2 && cv <= 0.7
+        ? 'media'
+        : 'baja';
+
+    if (presupuesto >= 30 && mesesConGasto === 0 && numMeses >= 3) {
+      irregulares.push({ c, media, med, max, cv, mesesSobre, motivo: `No has gastado en ${numMeses} meses; revisa si el límite sigue teniendo sentido.` });
+      continue;
+    }
+
+    if (confianza === 'baja') {
+      if (presupuesto > 0 && mesesSobre >= 2) {
+        irregulares.push({
+          c,
+          media,
+          med,
+          max,
+          cv,
+          mesesSobre,
+          motivo: med > presupuesto
+            ? 'Hay pocos meses con datos; revisa el límite manualmente antes de cambiarlo.'
+            : 'Tiene picos puntuales; no se propone cambiar el límite solo por esos meses.',
+        });
+      }
+      continue;
+    }
+
+    if (presupuesto > 0 && cv > 0.65 && max > med * 2.2 && mesesSobre <= 1) {
+      irregulares.push({
+        c,
+        media,
+        med,
+        max,
+        cv,
+        mesesSobre,
+        motivo: `Gasto irregular: ${eur0(max)} en un mes frente a una mediana de ${eur0(med)}. Mantén el límite y usa una bolsa para picos.`,
+      });
+      continue;
+    }
+
+    let sugerido = presupuesto;
+    let motivo = '';
+
+    if (presupuesto <= 0) {
+      if (med >= 15 && mesesConGasto >= 2) {
+        sugerido = redondear5(med * 1.1);
+        motivo = `No tienes límite definido; tu gasto mediano es ${eur0(med)}.`;
+      }
+    } else if (med > presupuesto * 1.1 && mesesSobre >= 2) {
+      sugerido = redondear5(Math.max(presupuesto, med * 1.1));
+      motivo = `Has superado el límite en ${mesesSobre} de ${numMeses} meses; tu gasto mediano es ${eur0(med)}.`;
+    } else if (med < presupuesto * 0.65 && presupuesto - med >= 20 && mesesSobre === 0) {
+      sugerido = redondear5(Math.max(med * 1.15, media * 1.05));
+      sugerido = Math.min(sugerido, presupuesto - 5);
+      motivo = `Tu gasto mediano es ${eur0(med)} y no has superado el límite en ${numMeses} meses; podrías liberar ${eur0(presupuesto - sugerido)}/mes.`;
+    }
+
+    const delta = sugerido - presupuesto;
+    if (Math.abs(delta) < 5) continue;
+
+    const key = `${d.n}:${c.id}:${sugerido}`;
+    if (ANALISIS_DESCARTADOS.has(key)) continue;
+
+    propuestas.push({
+      c,
+      actual: presupuesto,
+      sugerido,
+      delta,
+      motivo,
+      confianza,
+      media,
+      med,
+      max,
+      cv,
+      mesesSobre,
+      mesesConGasto,
+      numMeses,
+      key,
+      prioridad: delta > 0 ? 3 : presupuesto > 0 ? 1 : 2,
+    });
+  }
+
+  propuestas.sort((a, b) => (b.prioridad - a.prioridad) || Math.abs(b.delta) - Math.abs(a.delta));
+  const visibles = propuestas.slice(0, 5);
+  const totalDelta = visibles.reduce((a, p) => a + p.delta, 0);
+
+  return {
+    suficiente: true,
+    propuestas: visibles,
+    totalDelta,
+    totalNuevo: presupuestoTotal() + totalDelta,
+    ahorro: visibles.filter((p) => p.delta < 0).reduce((a, p) => a - p.delta, 0),
+    coste: visibles.filter((p) => p.delta > 0).reduce((a, p) => a + p.delta, 0),
+    irregulares,
+    evaluadas: d.cats.filter((c) => c.id !== '__none' && c.presupuesto > 0).length,
+  };
+}
+
+function construirConclusionesAnalisis(d) {
+  const out = [];
+  const add = (item) => { if (item && item.texto) out.push(item); };
+  const datosSuficientes = d.mesesBase.length >= 3;
+
+  if (!d.mesesBase.length) {
+    return [{
+      tipo: 'info',
+      icono: 'analisis',
+      titulo: 'Faltan datos para analizar',
+      texto: 'Añade gastos durante al menos 3 meses y aquí aparecerán conclusiones basadas en tu histórico real.',
+      impacto: 0,
+      detalle: null,
+    }];
+  }
+
+  if (d.mesesBase.length < 3) {
+    add({
+      tipo: 'info',
+      icono: 'calendario',
+      titulo: 'Histórico todavía corto',
+      texto: `Solo hay ${pluralMeses(d.mesesBase.length)} con datos. Las tendencias se mostrarán cuando haya al menos 3.`,
+      impacto: 0,
+      detalle: null,
+    });
+  }
+
+  if (d.variacionPeriodo != null && Math.abs(d.variacionPeriodo) >= 0.05 && d.tendenciaFiable) {
+    const sube = d.variacionPeriodo > 0;
+    add({
+      tipo: sube ? 'negative' : 'positive',
+      icono: sube ? 'tendencia' : 'check',
+      titulo: sube ? 'Gasto al alza' : 'Gasto a la baja',
+      texto: `Tu gasto medio ha ${sube ? 'subido' : 'bajado'} ${eur0(Math.abs(d.media - d.mediaPrevia))}/mes (${fmtPct(d.variacionPeriodo, { decimales: 1 })}) respecto al periodo anterior.`,
+      impacto: Math.abs(d.totalBase - d.totalPrevio),
+      detalle: { tipo: 'periodo' },
+    });
+  }
+
+  if (d.masCaro) {
+    const sobreMedia = d.media > 0 ? (d.masCaro.total - d.media) / d.media : null;
+    add({
+      tipo: sobreMedia != null && sobreMedia > 0.15 ? 'negative' : 'info',
+      icono: 'calendario',
+      titulo: `${fmtMes(d.masCaro.mk)}${d.masCaro.incompleto ? ' (en curso)' : ''} fue tu mes más caro`,
+      texto: `Gastaste ${eur0(d.masCaro.total)}${sobreMedia != null ? ` (${fmtPct(sobreMedia, { decimales: 0 })} sobre tu media)` : ''}.`,
+      impacto: d.media > 0 ? Math.max(0, d.masCaro.total - d.media) : 0,
+      detalle: { tipo: 'mes', mk: d.masCaro.mk },
+    });
+  }
+
+  const conCambio = d.cats.filter((c) => c.id !== '__none' && (c.totalActual >= 10 || c.totalPrevio >= 10));
+  const subidas = conCambio
+    .filter((c) => c.delta >= 10 && (c.pct == null || c.pct >= 0.12) && c.mesesConGasto >= 2)
+    .sort((a, b) => b.delta - a.delta);
+  const bajadas = conCambio
+    .filter((c) => c.delta <= -10 && (c.pct == null || c.pct <= -0.12) && c.mesesPrevioConGasto >= 2)
+    .sort((a, b) => a.delta - b.delta);
+
+  if (subidas.length && d.tendenciaFiable) {
+    const c = subidas[0];
+    add({
+      tipo: 'negative',
+      icono: 'tendencia',
+      titulo: `Más gasto en ${c.nombre}`,
+      texto: `Has aumentado ${eur0(c.delta)}/mes${c.pct != null ? ` (${fmtPct(c.pct, { decimales: 0 })})` : ''} respecto al periodo anterior.`,
+      impacto: c.delta,
+      detalle: { tipo: 'cat', id: c.id },
+    });
+  }
+
+  if (bajadas.length && d.tendenciaFiable) {
+    const c = bajadas[0];
+    add({
+      tipo: 'positive',
+      icono: 'check',
+      titulo: `Menos gasto en ${c.nombre}`,
+      texto: `Has reducido ${eur0(Math.abs(c.delta))}/mes${c.pct != null ? ` (${fmtPct(c.pct, { decimales: 0 })})` : ''} respecto al periodo anterior.`,
+      impacto: Math.abs(c.delta),
+      detalle: { tipo: 'cat', id: c.id },
+    });
+  }
+
+  const sobre = datosSuficientes ? d.cats
+    .filter((c) => c.id !== '__none' && c.presupuesto > 0 && c.mesesSobre >= 2)
+    .sort((a, b) => b.excesoMedio - a.excesoMedio) : [];
+  if (sobre.length) {
+    const c = sobre[0];
+    add({
+      tipo: 'negative',
+      icono: 'alerta',
+      titulo: `Presupuesto superado en ${c.nombre}`,
+      texto: `Te has pasado en ${c.mesesSobre} de ${pluralMeses(d.mesesBase.length)}; el exceso medio es ${eur0(c.excesoMedio)}/mes.`,
+      impacto: c.excesoMedio,
+      detalle: { tipo: 'cat', id: c.id },
+    });
+  }
+
+  const holgura = datosSuficientes ? d.cats
+    .filter((c) => c.id !== '__none' && c.presupuesto > 0 && c.mesesConGasto >= 2 && c.med < c.presupuesto * 0.65 && c.presupuesto - c.med >= 20 && c.mesesSobre === 0)
+    .sort((a, b) => (b.presupuesto - b.med) - (a.presupuesto - a.med)) : [];
+  if (holgura.length) {
+    const c = holgura[0];
+    add({
+      tipo: 'info',
+      icono: 'objetivo',
+      titulo: `Holgura en ${c.nombre}`,
+      texto: `Tu media es ${eur0(c.mediaActual)} y el límite ${eur0(c.presupuesto)}; podrías liberar ${eur0(c.presupuesto - c.med)}/mes.`,
+      impacto: c.presupuesto - c.med,
+      detalle: { tipo: 'cat', id: c.id },
+    });
+  }
+
+  const irregulares = datosSuficientes ? d.cats
+    .filter((c) => c.id !== '__none' && c.totalActual >= 50 && c.mesesConGasto >= 2 && c.cv > 0.65 && c.max > c.med * 2.2)
+    .sort((a, b) => b.max - a.max) : [];
+  if (irregulares.length) {
+    const c = irregulares[0];
+    add({
+      tipo: 'info',
+      icono: 'analisis',
+      titulo: `${c.nombre} es irregular`,
+      texto: `Un mes concentra ${eur0(c.max)} frente a una mediana de ${eur0(c.med)}. No ajustes el presupuesto solo por ese pico.`,
+      impacto: 0,
+      detalle: { tipo: 'cat', id: c.id },
+    });
+  }
+
+  if (datosSuficientes && d.presu > 0 && d.mesesPorEncima >= 2) {
+    add({
+      tipo: 'negative',
+      icono: 'alerta',
+      titulo: 'Meses por encima del presupuesto',
+      texto: `Has superado tu presupuesto global en ${d.mesesPorEncima} de ${pluralMeses(d.mesesBase.length)}.`,
+      impacto: d.mesesPorEncima * 5,
+      detalle: { tipo: 'periodo' },
+    });
+  }
+
+  const aumentoIds = new Set(d.propuestas.propuestas.filter((x) => x.delta > 0).map((x) => x.c.id));
+  const ahorro = datosSuficientes ? Math.max(0, d.propuestas.ahorro + d.cats
+    .filter((c) => c.id !== '__none' && c.presupuesto > 0 && c.mesesSobre >= 2 && !aumentoIds.has(c.id))
+    .reduce((a, c) => a + c.excesoMedio, 0) - d.propuestas.coste) : 0;
+  if (ahorro >= 20) {
+    add({
+      tipo: 'positive',
+      icono: 'objetivo',
+      titulo: 'Oportunidad de ahorro',
+      texto: `Ajustando presupuestos y excesos podrías liberar ~${eur0(ahorro)}/mes.`,
+      impacto: ahorro,
+      detalle: { tipo: 'plan' },
+    });
+  }
+
+  const vistos = new Set();
+  return out
+    .sort((a, b) => b.impacto - a.impacto)
+    .filter((item) => {
+      const key = item.detalle
+        ? `${item.detalle.tipo}:${item.detalle.id || item.detalle.mk || ''}`
+        : item.titulo;
+      if (vistos.has(key)) return false;
+      vistos.add(key);
+      return true;
+    })
+    .slice(0, 5);
+}
+
+function construirPlanAnalisis(d) {
+  const p = d.propuestas;
+  const datosSuficientes = d.mesesBase.length >= 3;
+  const sobre = datosSuficientes ? d.cats
+    .filter((c) => c.id !== '__none' && c.presupuesto > 0 && c.mesesSobre >= 2 && !p.propuestas.some((x) => x.c.id === c.id && x.delta > 0))
+    .sort((a, b) => b.excesoMedio - a.excesoMedio) : [];
+  const ahorroExcesos = datosSuficientes ? sobre.reduce((a, c) => a + c.excesoMedio, 0) : 0;
+  const ahorroMin = datosSuficientes ? Math.max(0, p.ahorro - p.coste) : 0;
+  const ahorroMax = datosSuficientes ? Math.max(0, p.ahorro + ahorroExcesos - p.coste) : 0;
+  const subir = p.propuestas.filter((x) => x.delta > 0).sort((a, b) => b.delta - a.delta)[0];
+  const bajar = p.propuestas.filter((x) => x.delta < 0).sort((a, b) => a.delta - b.delta)[0];
+  const margen = d.presu > 0 ? d.presu - d.media : 0;
+
+  let titulo = 'Sin cambios claros';
+  let texto = 'No hay recortes ni ajustes evidentes con los datos actuales.';
+  let tipo = 'info';
+  let icono = 'analisis';
+
+  if (!d.mesesBase.length) {
+    titulo = 'Faltan datos';
+    texto = 'Añade gastos durante al menos 3 meses para generar un plan personalizado.';
+  } else if (d.mesesBase.length < 3) {
+    texto = `Solo hay ${pluralMeses(d.mesesBase.length)} con datos. El plan será más fiable cuando haya al menos 3.`;
+  } else {
+    const acciones = [];
+    if (subir) acciones.push(`sube el límite de ${subir.c.nombre} a ${eur0(subir.sugerido)}`);
+    if (bajar) acciones.push(`baja el límite de ${bajar.c.nombre} a ${eur0(bajar.sugerido)}`);
+    if (sobre.length) acciones.push(`reduce el gasto en ${sobre[0].nombre} hacia ${eur0(sobre[0].presupuesto)}`);
+
+    if (acciones.length) {
+      titulo = 'Tu próximo paso';
+      texto = `Ajusta tus presupuestos: ${acciones.slice(0, 2).join(' y ')}.`;
+      if (ahorroMax >= 20) {
+        texto += ahorroMin > 0
+          ? ` Podrías liberar entre ${eur0(ahorroMin)} y ${eur0(ahorroMax)}/mes.`
+          : ` Podrías liberar ~${eur0(ahorroMax)}/mes.`;
+      }
+      tipo = ahorroMax >= 20 ? 'positive' : 'info';
+      icono = 'objetivo';
+    } else if (d.presu > 0 && d.media < d.presu) {
+      titulo = 'Vas dentro de presupuesto';
+      texto = `Tu gasto medio es ${eur0(d.media)} y tu límite ${eur0(d.presu)}. Te quedan ~${eur0(margen)}/mes de margen; formaliza una transferencia automática a ahorro.`;
+      tipo = 'positive';
+      icono = 'check';
     }
   }
-  desv.sort((a, b) => b.exceso - a.exceso);
-  const desvHtml = desv.length
-    ? desv.slice(0, 10).map((d) => `
-        <div class="dev-item">
-          <div class="dev-line1">
-            <span class="dev-name">${escapeHtml(d.c.nombre)}</span>
-            <span class="dev-amount">+${eur(d.exceso)}</span>
-          </div>
-          <div class="dev-meta">${fmtMes(d.mk)} · ${fmtPct(d.pct, { conSigno: false, decimales: 0 })} del límite</div>
-        </div>`).join('')
-    : `<div class="empty" style="padding:12px"><span class="big">✅</span>Ninguna etiqueta superó su límite en los meses con datos.</div>`;
 
-  // Tabla mes a mes
-  const tablaMeses = filas.slice().reverse().map((f) => {
-    const idx = filas.indexOf(f);
-    const prev = idx > 0 ? filas[idx - 1] : null;
-    const delta = prev && prev.n > 0 && f.n > 0 ? f.total - prev.total : null;
-    const pct = presu > 0 && f.n > 0 ? f.total / presu : null;
-    const estado = f.n === 0 ? '<span style="color:var(--muted-2)">sin datos</span>'
-      : pct == null ? '—'
-      : `<span class="${pct > 1 ? 'pct-bad' : pct > 0.7 ? 'pct-warn' : 'pct-good'}">${fmtPct(pct, { conSigno: false, decimales: 0 })}</span>`;
+  return {
+    titulo,
+    texto,
+    ahorro: ahorroMax,
+    ahorroMin,
+    ahorroMax,
+    ahorroExcesos,
+    tipo,
+    icono,
+    subir,
+    bajar,
+    sobre,
+    margen,
+    confianza: d.mesesBase.length >= 6 ? 'alta' : d.mesesBase.length >= 3 ? 'media' : 'baja',
+  };
+}
+
+function graficoEvolucionAnalisis(d) {
+  const filas = d.filasActuales;
+  const w = 340;
+  const h = 172;
+  const margen = { top: 18, right: 10, bottom: 30, left: 38 };
+  const ancho = w - margen.left - margen.right;
+  const alto = h - margen.top - margen.bottom;
+  const max = maxBonito(Math.max(...filas.map((f) => f.total), d.presu, 1));
+  const x = (i) => filas.length === 1 ? margen.left + ancho / 2 : margen.left + (i / (filas.length - 1)) * ancho;
+  const y = (valor) => margen.top + alto - (Math.max(0, valor) / max) * alto;
+  const puntos = filas.map((f, i) => ({ x: x(i), y: y(f.total), f, i }));
+  const linea = puntos.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  const area = puntos.length > 1
+    ? `${linea} L${puntos[puntos.length - 1].x.toFixed(1)} ${(margen.top + alto).toFixed(1)} L${puntos[0].x.toFixed(1)} ${(margen.top + alto).toFixed(1)} Z`
+    : '';
+  const yTicks = [0, max / 2, max];
+  const grid = yTicks.map((valor) => {
+    const py = y(valor);
+    return `<line x1="${margen.left}" x2="${w - margen.right}" y1="${py.toFixed(1)}" y2="${py.toFixed(1)}" stroke="rgba(255,255,255,.065)" stroke-width="1"/>
+      <text x="${margen.left - 6}" y="${(py + 3).toFixed(1)}" text-anchor="end">${eur0(valor)}</text>`;
+  }).join('');
+  const pasoEtiqueta = filas.length > 8 ? 2 : 1;
+  const etiquetasX = filas.map((f, i) => {
+    if (i % pasoEtiqueta !== 0 && i !== filas.length - 1) return '';
+    const label = `${etiquetaMes(f.mk)}${f.incompleto ? '*' : ''}`;
+    return `<text x="${x(i).toFixed(1)}" y="${h - 8}" text-anchor="${i === 0 ? 'start' : i === filas.length - 1 ? 'end' : 'middle'}">${label}</text>`;
+  }).join('');
+  const maxIdx = filas.reduce((best, f, i) => f.total > filas[best].total ? i : best, 0);
+  const mostrarTodos = filas.length <= 6;
+  const etiquetasValor = puntos.map((p) => {
+    if (!mostrarTodos && p.i !== maxIdx && p.i !== filas.length - 1) return '';
+    const ancla = p.i === 0 ? 'start' : p.i === filas.length - 1 ? 'end' : 'middle';
+    return `<text class="chart-value" x="${p.x.toFixed(1)}" y="${(p.y - 7).toFixed(1)}" text-anchor="${ancla}">${eur0(p.f.total)}</text>`;
+  }).join('');
+  const puntosSvg = puntos.map((p) => {
+    const titulo = `${fmtMes(p.f.mk)}: ${eur(p.f.total)}${p.f.incompleto ? ' (mes en curso)' : ''}`;
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.f.incompleto ? 3.4 : 3}" fill="${p.f.incompleto ? '#080a0c' : '#2eea8b'}" stroke="#2eea8b" stroke-width="${p.f.incompleto ? 1.6 : 0}"><title>${titulo}</title></circle>`;
+  }).join('');
+  const lineaPresupuesto = d.presu > 0
+    ? `<line x1="${margen.left}" x2="${w - margen.right}" y1="${y(d.presu).toFixed(1)}" y2="${y(d.presu).toFixed(1)}" stroke="rgba(255,255,255,.32)" stroke-width="1.2" stroke-dasharray="4 4"/>`
+    : '';
+
+  return `<svg class="analysis-chart-svg" viewBox="0 0 ${w} ${h}" role="img" aria-label="Evolución del gasto mensual y presupuesto">
+    ${grid}
+    ${lineaPresupuesto}
+    ${d.presu > 0 ? `<text x="${w - margen.right}" y="${(y(d.presu) - 5).toFixed(1)}" text-anchor="end">Presupuesto ${eur0(d.presu)}</text>` : ''}
+    ${area ? `<path d="${area}" fill="rgba(46,234,139,.065)"/>` : ''}
+    ${puntos.length > 1 ? `<path d="${linea}" fill="none" stroke="#2eea8b" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+    ${puntosSvg}
+    ${etiquetasValor}
+    ${etiquetasX}
+  </svg>`;
+}
+
+function vistaAnalisis(view) {
+  view.classList.add('view-analisis');
+  const d = construirAnalisis(ui.analisisMeses || 6);
+  const n = d.n;
+  const pctMedia = d.presu > 0 ? d.media / d.presu : null;
+  const mostrarVariacion = d.variacionPeriodo != null && d.mesesBase.length >= 2 && d.mesesPreviosBase.length >= 2;
+  const variacionClase = mostrarVariacion ? d.variacionPeriodo > 0 ? 'pct-bad' : d.variacionPeriodo < 0 ? 'pct-good' : '' : '';
+  const variacionTxt = mostrarVariacion
+    ? `${fmtPct(d.variacionPeriodo, { decimales: 1 })} vs. periodo anterior${d.tendenciaFiable ? '' : ' · poca muestra'}`
+    : 'Sin periodo anterior comparable';
+  const sobreMedia = d.masCaro && d.media > 0 ? (d.masCaro.total - d.media) / d.media : null;
+  const mesesTxt = pluralMeses(d.mesesBase.length);
+  const propuestas = d.propuestas;
+  const plan = d.plan;
+
+  const kpis = `
+    <div class="analysis-kpis stat-grid two">
+      <div class="stat analysis-kpi">
+        <div class="label">Gasto total</div>
+        <div class="value">${eur0(d.totalPeriodo)}</div>
+        <div class="hint ${variacionClase}">${variacionTxt}${d.mesActualIncompleto ? ' · incluye mes en curso' : ''}</div>
+      </div>
+      <div class="stat analysis-kpi">
+        <div class="label">Media mensual</div>
+        <div class="value">${eur0(d.media)}</div>
+        <div class="hint ${pctMedia != null ? pctClass(pctMedia) : ''}">${pctMedia != null ? `${fmtPct(pctMedia, { conSigno: false, decimales: 0 })} del presupuesto` : 'Sin presupuesto'} · ${mesesTxt}</div>
+      </div>
+      <div class="stat analysis-kpi">
+        <div class="label">Mes más caro</div>
+        <div class="value">${d.masCaro ? eur0(d.masCaro.total) : '—'}</div>
+        <div class="hint">${d.masCaro ? `${fmtMes(d.masCaro.mk)}${d.masCaro.incompleto ? ' (en curso)' : ''}` : 'Sin datos'}${sobreMedia != null && sobreMedia > 0.05 ? ` · ${fmtPct(sobreMedia, { decimales: 0 })} sobre la media` : ''}</div>
+      </div>
+      <div class="stat analysis-kpi">
+        <div class="label">Meses por encima</div>
+        <div class="value ${d.mesesPorEncima ? 'pct-bad' : 'pct-good'}">${d.mesesPorEncima}</div>
+        <div class="hint">de ${mesesTxt} con datos${d.presu > 0 ? ` · límite ${eur0(d.presu)}` : ' · sin límite'}</div>
+      </div>
+    </div>`;
+
+  const filasTabla = d.filasActuales.map((f) => {
+    const pct = d.presu > 0 ? f.total / d.presu : null;
+    const estado = f.n === 0
+      ? '<span class="trend-neutral">sin datos</span>'
+      : pct == null
+        ? '—'
+        : `<span class="${pct > 1 ? 'pct-bad' : pct > 0.7 ? 'pct-warn' : 'pct-good'}">${fmtPct(pct, { conSigno: false, decimales: 0 })}</span>`;
     return `<tr>
-      <td>${etiquetaMes(f.mk)}</td>
+      <td>${etiquetaMes(f.mk)}${f.incompleto ? ' *' : ''}</td>
       <td>${f.n ? eur0(f.total) : '—'}</td>
+      <td>${d.presu > 0 ? eur0(d.presu) : '—'}</td>
       <td>${estado}</td>
-      <td>${delta == null ? '—' : `<span class="${delta > 0 ? 'pct-bad' : 'pct-good'}">${delta > 0 ? '+' : '−'}${eur0(Math.abs(delta))}</span>`}</td>
     </tr>`;
   }).join('');
 
-  // Patrones (rachas, estacionalidad, holgura)
-  const patrones = [];
-  const estacionales = new Set();
-  if (conDatos.length >= 3) {
-    for (const c of cats) {
-      if (c.id === '__none') continue;
-      let streak = 0, maxStreak = 0;
-      for (const f of filas) {
-        const g = f.porCat[c.id] || 0;
-        if (c.presupuesto > 0 && g > c.presupuesto) { streak++; maxStreak = Math.max(maxStreak, streak); }
-        else streak = 0;
-      }
-      if (maxStreak >= 2) {
-        patrones.push(`<strong>${escapeHtml(c.nombre)}</strong>: ${maxStreak} meses seguidos por encima del límite.`);
-      }
-      const shares = conDatos.map((f) => (f.porCat[c.id] || 0) / (f.total || 1));
-      const med = mediana(shares);
-      if (c.total >= 40 && med < 0.6) {
-        const picos = conDatos
-          .map((f) => ({ f, g: f.porCat[c.id] || 0, share: (f.porCat[c.id] || 0) / (f.total || 1) }))
-          .filter((x) => x.g >= 15 && x.share > Math.max(med * 1.75, med + 0.1));
-        if (picos.length && picos.length <= 2) {
-          const top = picos.sort((a, b) => b.share - a.share)[0];
-          estacionales.add(c.id);
-          patrones.push(`<strong>${escapeHtml(c.nombre)}</strong>: en ${fmtMes(top.f.mk).toLowerCase()} fue el <strong>${(top.share * 100).toFixed(0)} %</strong> de tu gasto (media del periodo: ${med < 0.005 ? '<1' : (med * 100).toFixed(0)} %).`);
-        }
-      }
-      if (c.presupuesto > 0 && c.media > 0 && c.media < c.presupuesto * 0.55 && c.presupuesto - c.media >= 20) {
-        patrones.push(`<strong>${escapeHtml(c.nombre)}</strong>: tu media (${eur0(c.media)}) está muy por debajo del límite (${eur0(c.presupuesto)}); podrías ajustarlo y liberar <strong>${eur0(c.presupuesto - c.media)}/mes</strong>.`);
-      }
-    }
-  }
-  const patronesHtml = patrones.length
-    ? patrones.slice(0, 6).map((t) => `<div class="sub-number" style="margin:8px 0">• ${t}</div>`).join('')
-    : `<div class="hint" style="margin-top:0">Necesitas al menos 3 meses con gastos para detectar patrones (rachas, estacionalidad, holguras).</div>`;
+  const detalleMensual = `
+    <details class="analysis-details">
+      <summary>Ver detalle mensual <span class="chev">${icono('chevron', 14)}</span></summary>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Mes</th><th>Gasto</th><th>Presupuesto</th><th>% límite</th></tr></thead>
+          <tbody>${filasTabla}</tbody>
+        </table>
+      </div>
+      ${d.mesActualIncompleto ? '<p class="analysis-note">* El mes en curso está incompleto y no se usa para la media ni para las tendencias.</p>' : ''}
+    </details>`;
 
-  // Plan sugerido (reglas a partir de tus datos)
-  const plan = [];
-  if (!conDatos.length) {
-    plan.push('Añade gastos durante 2–3 meses y aquí aparecerá un plan personalizado: recortes concretos y a dónde mandar lo ahorrado.');
-  } else {
-    const excesos = state.categorias.map((c) => {
-      if (!(c.presupuesto > 0) || estacionales.has(c.id)) return null;
-      const avg = conDatos.reduce((a, f) => a + Math.max((f.porCat[c.id] || 0) - c.presupuesto, 0), 0) / conDatos.length;
-      return { c, avg };
-    }).filter((x) => x && x.avg >= 2).sort((a, b) => b.avg - a.avg);
+  const conclusionesHtml = d.conclusiones.map((c) => {
+    const contenido = `
+      <span class="conclusion-ico">${icono(c.icono || 'analisis', 16)}</span>
+      <span class="conclusion-body"><strong>${escapeHtml(c.titulo)}</strong><span>${c.texto}</span></span>
+      ${c.detalle ? `<span class="conclusion-chev">${icono('chevron', 14)}</span>` : ''}`;
+    if (!c.detalle) return `<div class="conclusion-item ${c.tipo}">${contenido}</div>`;
+    const attr = c.detalle.tipo === 'cat'
+      ? `data-detalle-cat="${escapeHtml(c.detalle.id)}"`
+      : c.detalle.tipo === 'mes'
+        ? `data-detalle-mes="${escapeHtml(c.detalle.mk)}"`
+        : c.detalle.tipo === 'plan'
+          ? 'data-detalle-plan="1"'
+          : 'data-detalle-periodo="1"';
+    return `<button class="conclusion-item ${c.tipo}" type="button" ${attr}>${contenido}</button>`;
+  }).join('');
 
-    if (excesos.length) {
-      const ahorroMes = excesos.reduce((a, x) => a + x.avg, 0);
-      const lista = excesos.slice(0, 3).map((x) => `${escapeHtml(x.c.nombre)} (~${eur0(x.avg)}/mes)`).join(', ');
-      plan.push(`Para cumplir tus límites, recorta de media <strong>${eur0(ahorroMes)}/mes</strong>: ${lista}.`);
-      const v = datosVivienda();
-      const mesesGanados = v.aporteMes > 0 && v.faltan > 0 ? v.faltan / v.aporteMes - v.faltan / (v.aporteMes + ahorroMes) : 0;
-      if (mesesGanados >= 0.5) {
-        const m = Math.round(mesesGanados);
-        plan.push(`Si ese recorte (${eur0(ahorroMes * 12)}/año) va al fondo vivienda, adelantas la entrada unos <strong>${m} ${m === 1 ? 'mes' : 'meses'}</strong>.`);
-      } else {
-        plan.push(`Ese recorte supone <strong>${eur0(ahorroMes * 12)}/año</strong>: puedes destinarlo al fondo vivienda o a ahorro a largo plazo.`);
-      }
-    } else {
-      plan.push('Vas dentro de todos tus límites en los meses con datos. Próximo paso: formaliza el ahorro que te sobra — el margen sin asignar puede ir al fondo vivienda cada mes.');
-    }
+  const cambiosHtml = d.cambios.length ? d.cambios.map((c) => {
+    const clase = claseTendencia(c.pct);
+    const pctTxt = c.pct != null ? fmtPct(c.pct, { decimales: 0 }) : (c.totalPrevio === 0 && c.totalActual > 0 ? 'nuevo' : c.totalActual === 0 && c.totalPrevio > 0 ? 'sin gasto' : '—');
+    const flecha = c.pct == null ? '' : c.pct > 0.02 ? '↑ ' : c.pct < -0.02 ? '↓ ' : '→ ';
+    return `<button class="change-row" type="button" data-detalle-cat="${escapeHtml(c.id)}" aria-label="Ver detalle de ${escapeHtml(c.nombre)}">
+      <span class="change-ico" style="background:${c.color}1f;border-color:${c.color}33">${emojiCategoria(c.nombre)}</span>
+      <span class="change-main"><strong>${escapeHtml(c.nombre)}</strong><small>media ${eur0(c.mediaActual)}/mes</small></span>
+      <span class="change-value ${clase}"><strong>${fmtEurDelta(c.delta)}</strong><small>${flecha}${pctTxt}</small></span>
+      <span class="change-chev">${icono('chevron', 14)}</span>
+    </button>`;
+  }).join('') : `<div class="analysis-empty">${d.tendenciaFiable ? 'No hay cambios suficientemente grandes en el periodo seleccionado.' : 'Necesitas al menos 3 meses con datos para comparar cambios de forma fiable.'}</div>`;
 
-    const holgura = state.categorias.map((c) => {
-      if (!(c.presupuesto > 0)) return null;
-      const total = conDatos.reduce((a, f) => a + (f.porCat[c.id] || 0), 0);
-      const mesesConGasto = conDatos.filter((f) => (f.porCat[c.id] || 0) > 0).length;
-      const m = total / conDatos.length;
-      if (mesesConGasto < 2 || m >= c.presupuesto * 0.55) return null;
-      return { c, m };
-    }).filter((x) => x && x.c.presupuesto - x.m >= 25).sort((a, b) => (b.c.presupuesto - b.m) - (a.c.presupuesto - a.m))[0];
-    if (holgura) {
-      plan.push(`Tienes holgura en <strong>${escapeHtml(holgura.c.nombre)}</strong> (media ${eur0(holgura.m)} de ${eur0(holgura.c.presupuesto)}): si bajas su límite, los <strong>${eur0(holgura.c.presupuesto - holgura.m)}/mes</strong> liberados pueden ir directos a ahorro.`);
-    }
+  const comparativa = d.cats
+    .filter((c) => c.totalActual > 0 || c.totalPrevio > 0 || c.presupuesto > 0)
+    .sort((a, b) => b.mediaActual - a.mediaActual)
+    .map((c) => {
+      const pctTxt = c.pct != null && d.tendenciaFiable
+        ? `${c.pct > 0.02 ? '↑ ' : c.pct < -0.02 ? '↓ ' : '→ '}${fmtPct(c.pct, { decimales: 0 })}`
+        : c.totalPrevio === 0 && c.totalActual > 0
+          ? 'nuevo'
+          : c.totalActual === 0 && c.totalPrevio > 0
+            ? 'sin gasto'
+            : '—';
+      return `<button class="cat-compare-row" type="button" data-detalle-cat="${escapeHtml(c.id)}" aria-label="Ver detalle de ${escapeHtml(c.nombre)}">
+        <span class="cat-compare-main">
+          <span class="cat-compare-ico" style="background:${c.color}1f;border-color:${c.color}33">${emojiCategoria(c.nombre)}</span>
+          <span class="cat-compare-name"><strong>${escapeHtml(c.nombre)}</strong><small>${c.presupuesto > 0 ? `límite ${eur0(c.presupuesto)}` : 'sin límite'}</small></span>
+        </span>
+        <span class="cat-compare-media">${eur0(c.mediaActual)}<small>/mes</small></span>
+        <span class="cat-compare-trend ${d.tendenciaFiable ? claseTendencia(c.pct) : 'trend-neutral'}">${pctTxt}</span>
+      </button>`;
+    }).join('');
 
-    const viajes = cats.find((c) => c.id === 'c-viajes');
-    if (viajes && viajes.total > 0) {
-      const mesesSinVia = conDatos.filter((f) => (f.porCat['c-viajes'] || 0) === 0).length;
-      const maxVia = Math.max(...conDatos.map((f) => f.porCat['c-viajes'] || 0), 0);
-      if (mesesSinVia > 0 && maxVia >= Math.max(viajes.media, 1) * 1.5) {
-        plan.push('Viajes es estacional: en los meses que viajas concentras el gasto. Usa la posición <strong>«Viajes y regalos»</strong> como bolsa (50 €/mes del plan) y tira de ella solo esos meses, sin tocar la vivienda.');
-      }
-    }
-  }
+  const propuestasHtml = !propuestas.suficiente
+    ? `<div class="analysis-empty"><strong>Necesitas al menos 3 meses con datos</strong><br>Cuando tengas más histórico podremos comparar tus límites con tu gasto real sin reaccionar a un mes atípico.</div>`
+    : propuestas.propuestas.length
+      ? propuestas.propuestas.map((p) => {
+        const sube = p.delta > 0;
+        const confianzaCls = p.confianza === 'alta' ? 'pct-good' : p.confianza === 'media' ? 'pct-warn' : 'trend-neutral';
+        return `<div class="budget-item">
+          <div class="budget-top">
+            <span class="budget-ico" style="background:${p.c.color}1f;border-color:${p.c.color}33">${emojiCategoria(p.c.nombre)}</span>
+            <div class="budget-main"><strong>${escapeHtml(p.c.nombre)}</strong><span class="${confianzaCls}">Confianza ${p.confianza}</span></div>
+            <span class="budget-delta ${sube ? 'up' : 'down'}">${fmtEurDelta(p.delta)}</span>
+          </div>
+          <div class="budget-line">
+            <span>Actual <strong>${eur0(p.actual)}</strong></span>
+            <span class="arrow">→</span>
+            <span>Nuevo <strong>${eur0(p.sugerido)}</strong></span>
+          </div>
+          <p class="budget-reason">${escapeHtml(p.motivo)}</p>
+          <div class="budget-actions">
+            <button class="btn small" type="button" data-presupuesto-aceptar="${escapeHtml(p.c.id)}" data-presupuesto-valor="${p.sugerido}" data-key="${escapeHtml(p.key)}">Aceptar</button>
+            <button class="btn small ghost" type="button" data-presupuesto-rechazar="1" data-key="${escapeHtml(p.key)}">Descartar</button>
+          </div>
+        </div>`;
+      }).join('')
+      : `<div class="analysis-empty">${propuestas.irregulares.length ? 'No hay ajustes automáticos claros; revisa las categorías con picos antes de cambiar límites.' : 'Tus presupuestos están alineados con tu gasto habitual. No hay ajustes claros con los datos actuales.'}</div>`;
+
+  const irregularesHtml = propuestas.irregulares.length
+    ? `<div class="analysis-note"><strong>Revisión manual:</strong> ${propuestas.irregulares.slice(0, 2).map((x) => `${escapeHtml(x.c.nombre)}: ${escapeHtml(x.motivo)}`).join(' ')}${propuestas.irregulares.length > 2 ? ` Y ${propuestas.irregulares.length - 2} más.` : ''}</div>`
+    : '';
+
+  const totalPropuestas = propuestas.propuestas.length
+    ? `<div class="budget-total">
+        <div><span>Si aceptas todas</span><strong>${eur0(propuestas.totalNuevo)}/mes</strong></div>
+        <span class="pill ${propuestas.totalDelta > 0 ? 'pct-warn' : 'pct-good'}">${fmtEurDelta(propuestas.totalDelta)}/mes</span>
+      </div>`
+    : '';
+
+  const ahorroTxt = plan.ahorroMax > 0
+    ? plan.ahorroMin > 0 && plan.ahorroMax > plan.ahorroMin + 5
+      ? `~${eur0(plan.ahorroMin)}–${eur0(plan.ahorroMax)}/mes`
+      : `~${eur0(plan.ahorroMax)}/mes`
+    : 'Sin ahorro claro';
 
   view.innerHTML = `
-    ${cabecera('Análisis', false)}
-    <div class="chips" style="margin:0 0 14px">
-      ${[3, 6, 12].map((m) => `<button class="chip ${n === m ? 'selected' : ''}" data-periodo="${m}" type="button">${m} meses</button>`).join('')}
+    <div class="analysis-page">
+      <header class="page-head analysis-head">
+        <div>
+          <span class="eyebrow">Inteligencia de gastos</span>
+          <h1>Análisis</h1>
+          <p class="page-sub">Patrones, comparativas y decisiones para el próximo mes.</p>
+        </div>
+        <div class="chips period-chips" aria-label="Periodo de análisis">
+          ${[3, 6, 12].map((m) => `<button class="chip ${n === m ? 'selected' : ''}" data-periodo="${m}" type="button">${m} meses</button>`).join('')}
+        </div>
+      </header>
+
+      ${kpis}
+
+      <section class="card analysis-card">
+        <div class="card-head">
+          <div><h2>Evolución del gasto</h2><p>Gasto real frente a tu presupuesto mensual</p></div>
+          ${mostrarVariacion ? `<span class="pill ${variacionClase}" title="${d.tendenciaFiable ? 'Comparación con el periodo anterior de igual duración' : 'Comparación orientativa: menos de 3 meses con datos'}">${fmtPct(d.variacionPeriodo, { decimales: 1 })}</span>` : '<span class="pill trend-neutral">Sin comparación</span>'}
+        </div>
+        ${d.mesesBase.length ? graficoEvolucionAnalisis(d) : '<div class="analysis-empty">Aún no hay gastos registrados en este periodo.</div>'}
+        ${d.mesesBase.length ? `<div class="analysis-chart-legend">
+          <span class="analysis-legend-item"><i class="analysis-legend-dot"></i> Gasto real</span>
+          ${d.presu > 0 ? '<span class="analysis-legend-item"><i class="analysis-legend-line dashed"></i> Presupuesto</span>' : ''}
+          ${d.mesActualIncompleto ? '<span class="analysis-legend-item"><i class="analysis-legend-dot" style="background:transparent;border:1.5px solid var(--accent)"></i> Mes en curso *</span>' : ''}
+        </div>` : ''}
+        ${d.presu > 0 ? '<p class="analysis-note">El presupuesto es el actual y se aplica a todos los meses; no hay histórico de cambios de límites.</p>' : '<p class="analysis-note">No tienes un presupuesto mensual definido. Puedes crearlo en Ajustes.</p>'}
+        ${detalleMensual}
+      </section>
+
+      <section class="card analysis-card">
+        <div class="card-head"><div><h2>Principales conclusiones</h2><p>Lo más relevante de tus datos, ordenado por impacto</p></div></div>
+        <div class="conclusion-list">${conclusionesHtml}</div>
+      </section>
+
+      <section class="card analysis-card">
+        <div class="card-head"><div><h2>Cambios destacados</h2><p>Variación frente al periodo anterior de la misma duración</p></div></div>
+        <div class="change-list">${cambiosHtml}</div>
+        <p class="analysis-note">Un aumento no siempre es malo: puede reflejar más actividad o una compra puntual. La tendencia es una señal, no un juicio.</p>
+      </section>
+
+      <section class="card analysis-card">
+        <div class="card-head"><div><h2>Comparativa por categoría</h2><p>Media mensual y tendencia del periodo</p></div></div>
+        <div class="cat-compare">
+          <div class="cat-compare-head"><span>Categoría</span><span>Media</span><span>Tendencia</span></div>
+          ${comparativa || '<div class="analysis-empty">Sin categorías con datos en el periodo.</div>'}
+        </div>
+        <p class="analysis-note">${d.tendenciaFiable ? `Media calculada sobre ${mesesTxt} con datos. Tendencia frente al periodo anterior de igual duración.` : 'Tendencia orientativa: todavía no hay 3 meses con datos suficientes para consolidarla.'}</p>
+      </section>
+
+      <section class="card analysis-card">
+        <div class="card-head">
+          <div><h2>Ajuste de presupuestos</h2><p>Propuesta para el próximo mes basada en tu gasto real</p></div>
+          <span class="pill">${propuestas.propuestas.length} ${propuestas.propuestas.length === 1 ? 'propuesta' : 'propuestas'}</span>
+        </div>
+        <p class="analysis-note" style="margin-top:0;margin-bottom:10px">Nada se modifica sin tu permiso. Cada propuesta se puede aceptar o descartar.</p>
+        <div class="budget-list">${propuestasHtml}</div>
+        ${irregularesHtml}
+        ${totalPropuestas}
+      </section>
+
+      <section class="card analysis-card plan-card">
+        <div class="card-head">
+          <div><h2>Plan sugerido</h2><p>La acción con más impacto para el próximo mes</p></div>
+          <span class="pill ${plan.tipo === 'positive' ? 'pct-good' : 'trend-neutral'}">Confianza ${plan.confianza}</span>
+        </div>
+        <div class="plan-hero">
+          <span class="plan-ico">${icono(plan.icono || 'objetivo', 17)}</span>
+          <div><strong>${escapeHtml(plan.titulo)}</strong><p>${plan.texto}</p></div>
+        </div>
+        <div class="plan-savings">
+          <div><span>Ahorro potencial estimado</span><strong>${ahorroTxt}</strong></div>
+          <small>${plan.ahorroExcesos > 0 ? 'Incluye ajustes de límites y reducción de excesos recurrentes.' : 'Calculado con tus límites y tu gasto histórico.'}</small>
+        </div>
+        <button class="btn secondary full" type="button" data-detalle-plan="1">Ver detalle del plan ${icono('flecha', 14)}</button>
+      </section>
+
+      <p class="hint">Sugerencias calculadas con tus propios límites y gastos; no son asesoramiento financiero.</p>
     </div>
-    <div class="stat-grid" style="margin-bottom:12px">
-      <div class="stat"><div class="label">Gastado en ${n} meses</div><div class="value">${eur0(totalPeriodo)}</div><div class="hint" style="margin-top:2px">${conDatos.length} de ${n} meses con datos</div></div>
-      <div class="stat"><div class="label">Media mensual</div><div class="value">${eur0(media)}</div><div class="hint ${pctClass(pctMedia)}" style="margin-top:2px">${pctMedia != null ? fmtPct(pctMedia, { conSigno: false, decimales: 0 }) + ' del límite' : ''}</div></div>
-      <div class="stat"><div class="label">Mes más caro</div><div class="value">${masCaro ? eur0(masCaro.total) : '—'}</div><div class="hint" style="margin-top:2px">${masCaro ? fmtMes(masCaro.mk) : 'sin datos'}</div></div>
-      <div class="stat"><div class="label">Meses por encima</div><div class="value ${mesesPasados ? 'pct-bad' : 'pct-good'}">${mesesPasados}</div><div class="hint" style="margin-top:2px">de ${conDatos.length} con datos</div></div>
-    </div>
-
-    <h2 style="margin:4px 4px 10px">Dónde te pasaste</h2>
-    <div class="card" style="padding-top:4px;padding-bottom:4px">${desvHtml}</div>
-
-    <h2 style="margin:18px 4px 10px">Dónde se va (media mensual)</h2>
-    <div class="cat-list">${filasCats || '<div class="empty">Sin gastos en el periodo.</div>'}</div>
-
-    <h2 style="margin:18px 4px 10px">Comparativa mensual</h2>
-    <table class="card table"><thead><tr><th>Mes</th><th>Gasto</th><th>% límite</th><th>vs. anterior</th></tr></thead><tbody>${tablaMeses}</tbody></table>
-
-    <h2 style="margin:18px 4px 10px">Patrones que veo</h2>
-    <div class="card">${patronesHtml}</div>
-
-    <h2 style="margin:18px 4px 10px">Plan sugerido</h2>
-    <div class="card" style="border-color:var(--accent)">
-      ${plan.map((t) => `<div class="sub-number" style="margin:6px 0">• ${t}</div>`).join('')}
-    </div>
-    <p class="hint">Sugerencias calculadas con tus propios límites y gastos; no son asesoramiento financiero.</p>
   `;
 
   view.querySelectorAll('[data-periodo]').forEach((b) => {
     b.onclick = () => { ui.analisisMeses = +b.dataset.periodo; render(); };
   });
+
+  view.querySelectorAll('[data-presupuesto-aceptar]').forEach((b) => {
+    b.onclick = () => {
+      const c = catPorId(b.dataset.presupuestoAceptar);
+      const valor = parseAmount(b.dataset.presupuestoValor);
+      if (!c || valor == null) return;
+      c.presupuesto = valor;
+      stamp(c);
+      ANALISIS_DESCARTADOS.delete(b.dataset.key);
+      guardarEstado();
+      toast(`Presupuesto de ${c.nombre} actualizado a ${eur0(valor)}`);
+      render();
+    };
+  });
+
+  view.querySelectorAll('[data-presupuesto-rechazar]').forEach((b) => {
+    b.onclick = () => {
+      ANALISIS_DESCARTADOS.add(b.dataset.key);
+      toast('Propuesta descartada');
+      render();
+    };
+  });
+
+  view.querySelectorAll('[data-detalle-cat]').forEach((b) => {
+    b.onclick = () => modalDetalleCategoriaAnalisis(b.dataset.detalleCat);
+  });
+  view.querySelectorAll('[data-detalle-mes]').forEach((b) => {
+    b.onclick = () => modalDetalleMesAnalisis(b.dataset.detalleMes);
+  });
+  view.querySelectorAll('[data-detalle-periodo]').forEach((b) => {
+    b.onclick = () => modalDetallePeriodoAnalisis();
+  });
+  view.querySelectorAll('[data-detalle-plan]').forEach((b) => {
+    b.onclick = () => modalDetallePlanAnalisis();
+  });
+}
+
+function abrirModalAnalisis(html) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal">${html}</div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
+  overlay.querySelectorAll('[data-cerrar-modal]').forEach((b) => { b.onclick = cerrar; });
+  return overlay;
+}
+
+function modalDetalleCategoriaAnalisis(id) {
+  const d = construirAnalisis(ui.analisisMeses || 6);
+  const c = d.cats.find((x) => x.id === id);
+  if (!c) return;
+  const filas = d.baseActual.map((f) => {
+    const gasto = f.porCat[c.id] || 0;
+    const p = c.presupuesto;
+    const diff = f.n > 0 && p > 0 ? gasto - p : null;
+    return `<tr>
+      <td>${etiquetaMes(f.mk)}${f.incompleto ? ' *' : ''}</td>
+      <td>${f.n ? eur0(gasto) : '—'}</td>
+      <td>${p > 0 ? eur0(p) : '—'}</td>
+      <td class="${diff == null ? '' : diff > 0 ? 'pct-bad' : 'pct-good'}">${diff == null ? '—' : fmtEurDelta(diff)}</td>
+    </tr>`;
+  }).join('');
+  abrirModalAnalisis(`
+    <h3>${escapeHtml(c.nombre)}</h3>
+    <p class="hint">Detalle de los últimos ${pluralMeses(d.mesesBase.length)} con datos. Periodo anterior: media ${eur0(c.mediaPrevia)} · variación ${c.pct != null ? fmtPct(c.pct, { decimales: 1 }) : '—'}.</p>
+    <div class="stat-grid two" style="margin:14px 0">
+      <div class="stat"><div class="label">Media mensual</div><div class="value">${eur0(c.mediaActual)}</div></div>
+      <div class="stat"><div class="label">Presupuesto</div><div class="value">${c.presupuesto > 0 ? eur0(c.presupuesto) : 'Sin límite'}</div></div>
+      <div class="stat"><div class="label">Mediana</div><div class="value">${eur0(c.med)}</div></div>
+      <div class="stat"><div class="label">Meses sobre límite</div><div class="value">${c.mesesSobre} de ${d.mesesBase.length}</div></div>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Mes</th><th>Gasto</th><th>Presupuesto</th><th>Diferencia</th></tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </div>
+    <div class="modal-actions"><button class="btn secondary" type="button" data-cerrar-modal="1">Cerrar</button></div>
+  `);
+}
+
+function modalDetalleMesAnalisis(mk) {
+  const gastos = gastosDelMes(mk).slice().sort((a, b) => b.monto - a.monto);
+  const total = gastos.reduce((a, g) => a + g.monto, 0);
+  const presu = presupuestoTotal();
+  const lista = gastos.length
+    ? gastos.slice(0, 12).map((g) => {
+      const c = catPorId(g.catId);
+      return `<div class="exp-item" style="cursor:default">
+        <span class="dot" style="background:${c ? c.color : '#64748b'}"></span>
+        <span class="exp-main"><span class="exp-note">${escapeHtml(c ? c.nombre : 'Sin etiqueta')}</span><span class="exp-cat">${fmtDia(g.fecha)}${g.nota ? ' · ' + escapeHtml(g.nota) : ''}</span></span>
+        <span class="exp-amount">${eur(g.monto)}</span>
+      </div>`;
+    }).join('')
+    : '<div class="analysis-empty">No hay gastos registrados en este mes.</div>';
+  abrirModalAnalisis(`
+    <h3>${fmtMes(mk)}</h3>
+    <p class="hint">${gastos.length} ${gastos.length === 1 ? 'gasto' : 'gastos'} registrados${presu > 0 ? ` · presupuesto ${eur0(presu)}` : ''}.</p>
+    <div class="stat-grid two" style="margin:14px 0">
+      <div class="stat"><div class="label">Gasto total</div><div class="value">${eur0(total)}</div></div>
+      <div class="stat"><div class="label">Estado</div><div class="value ${presu > 0 && total > presu ? 'pct-bad' : 'pct-good'}">${presu > 0 ? (total > presu ? 'Por encima' : 'Dentro') : 'Sin límite'}</div></div>
+    </div>
+    ${gastos.length > 12 ? `<p class="hint">Se muestran los 12 gastos más altos de ${gastos.length}.</p>` : ''}
+    <div>${lista}</div>
+    <div class="modal-actions"><button class="btn secondary" type="button" data-cerrar-modal="1">Cerrar</button></div>
+  `);
+}
+
+function modalDetallePeriodoAnalisis() {
+  const d = construirAnalisis(ui.analisisMeses || 6);
+  const filas = d.baseActual.map((f) => {
+    const pct = d.presu > 0 ? f.total / d.presu : null;
+    return `<tr>
+      <td>${etiquetaMes(f.mk)}${f.incompleto ? ' *' : ''}</td>
+      <td>${f.n ? eur0(f.total) : '—'}</td>
+      <td>${d.presu > 0 ? eur0(d.presu) : '—'}</td>
+      <td class="${pct == null ? '' : pct > 1 ? 'pct-bad' : pct > 0.7 ? 'pct-warn' : 'pct-good'}">${pct == null ? '—' : fmtPct(pct, { conSigno: false, decimales: 0 })}</td>
+    </tr>`;
+  }).join('');
+  abrirModalAnalisis(`
+    <h3>Comparativa del periodo</h3>
+    <p class="hint">Periodo actual frente al inmediatamente anterior de la misma duración.</p>
+    <div class="stat-grid two" style="margin:14px 0">
+      <div class="stat"><div class="label">Media actual</div><div class="value">${eur0(d.media)}</div></div>
+      <div class="stat"><div class="label">Media anterior</div><div class="value">${eur0(d.mediaPrevia)}</div></div>
+      <div class="stat"><div class="label">Variación</div><div class="value ${d.variacionPeriodo == null ? '' : d.variacionPeriodo > 0 ? 'pct-bad' : 'pct-good'}">${d.variacionPeriodo == null ? '—' : fmtPct(d.variacionPeriodo, { decimales: 1 })}</div></div>
+      <div class="stat"><div class="label">Meses con datos</div><div class="value">${d.mesesBase.length}</div></div>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Mes</th><th>Gasto</th><th>Presupuesto</th><th>% límite</th></tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </div>
+    <div class="modal-actions"><button class="btn secondary" type="button" data-cerrar-modal="1">Cerrar</button></div>
+  `);
+}
+
+function modalDetallePlanAnalisis() {
+  const d = construirAnalisis(ui.analisisMeses || 6);
+  const p = d.propuestas;
+  const propuestas = p.propuestas.length
+    ? p.propuestas.map((x) => `<div class="budget-item">
+        <div class="budget-top">
+          <span class="budget-ico" style="background:${x.c.color}1f;border-color:${x.c.color}33">${emojiCategoria(x.c.nombre)}</span>
+          <div class="budget-main"><strong>${escapeHtml(x.c.nombre)}</strong><span>${x.delta > 0 ? 'Subir límite' : 'Bajar límite'} · confianza ${x.confianza}</span></div>
+          <span class="budget-delta ${x.delta > 0 ? 'up' : 'down'}">${fmtEurDelta(x.delta)}</span>
+        </div>
+        <div class="budget-line"><span>Actual <strong>${eur0(x.actual)}</strong></span><span class="arrow">→</span><span>Nuevo <strong>${eur0(x.sugerido)}</strong></span></div>
+        <p class="budget-reason">${escapeHtml(x.motivo)}</p>
+      </div>`).join('')
+    : '<div class="analysis-empty">No hay propuestas de presupuesto con los datos actuales.</div>';
+  const excesos = d.cats
+    .filter((c) => c.id !== '__none' && c.presupuesto > 0 && c.mesesSobre >= 2)
+    .sort((a, b) => b.excesoMedio - a.excesoMedio)
+    .slice(0, 4)
+    .map((c) => `<div class="history-item" style="cursor:default"><span class="m">${escapeHtml(c.nombre)}<span class="c" style="display:block">${c.mesesSobre} meses por encima</span></span><span class="v pct-bad">${eur0(c.excesoMedio)}/mes</span></div>`)
+    .join('');
+  abrirModalAnalisis(`
+    <h3>Detalle del plan</h3>
+    <p class="hint">${escapeHtml(d.plan.texto)}</p>
+    <div class="plan-savings" style="margin-top:12px">
+      <div><span>Ahorro potencial estimado</span><strong>${d.plan.ahorroMax > 0 ? (d.plan.ahorroMin > 0 && d.plan.ahorroMax > d.plan.ahorroMin + 5 ? `~${eur0(d.plan.ahorroMin)}–${eur0(d.plan.ahorroMax)}/mes` : `~${eur0(d.plan.ahorroMax)}/mes`) : 'Sin ahorro claro'}</strong></div>
+      <small>Confianza ${d.plan.confianza}</small>
+    </div>
+    <h3 style="margin:16px 0 8px;font-size:0.92rem">Ajustes de presupuesto</h3>
+    ${propuestas}
+    ${excesos ? `<h3 style="margin:16px 0 4px;font-size:0.92rem">Excesos recurrentes</h3>${excesos}` : ''}
+    <p class="analysis-note">Las propuestas son sugerencias. No se aplicará ningún cambio hasta que lo aceptes en la pantalla de Análisis.</p>
+    <div class="modal-actions"><button class="btn secondary" type="button" data-cerrar-modal="1">Cerrar</button></div>
+  `);
 }
 
 /* ============ Vista: Compartidos / Bizum ============ */
@@ -1905,9 +3305,13 @@ function vistaCompartidos(view) {
   }).join('') : '<div class="empty" style="padding:14px">Sin bizums registrados.</div>';
 
   view.innerHTML = `
-    <header class="view-header">
-      <h1>🤝 Compartidos</h1>
-      <button class="btn secondary small" id="comp-back" type="button">← Gastos</button>
+    <header class="page-head">
+      <div>
+        <span class="eyebrow">Gastos en común</span>
+        <h1>Compartidos y Bizum</h1>
+        <p class="page-sub">Cenas, regalos y transferencias: quién te debe y cuánto.</p>
+      </div>
+      <button class="btn secondary small" id="comp-back" type="button">← Volver a gastos</button>
     </header>
     <div class="summary-strip">
       <div><div class="label">Te deben</div><div class="value pct-good">${eur(bal.debido)}</div></div>
@@ -2228,13 +3632,16 @@ function vistaAjustes(view) {
   const sumaPct = (+pgRep.vivienda || 0) + (+pgRep.etf || 0) + (+pgRep.viajes || 0);
 
   view.innerHTML = `
+    <div class="settings-page">
     ${cabecera('Ajustes', false)}
 
     <div class="card">
-      <div class="card-title"><span>Datos personales</span></div>
+      <div class="card-title"><span>Perfil y nómina</span></div>
+      <div class="field"><label for="aj-nombre">Tu nombre</label>
+        <input id="aj-nombre" type="text" placeholder="Ej.: Juan" value="${escapeHtml(state.ajustes.nombre || '')}" /></div>
       <div class="field"><label for="aj-ingreso">Ingreso neto mensual (€)</label>
         <input id="aj-ingreso" type="text" inputmode="decimal" value="${String(state.ajustes.ingreso || 0).replace('.', ',')}" /></div>
-      <p class="hint">Se usa para el indicador de ahorro del mes en «Patrimonio».</p>
+      <p class="hint">El nombre se usa en el saludo de Inicio. El ingreso alimenta el indicador de ahorro del mes en Patrimonio.</p>
     </div>
 
     <div class="card">
@@ -2343,7 +3750,17 @@ function vistaAjustes(view) {
     </div>
 
     <p class="hint" style="text-align:center;margin-top:20px">Finanzas Personal · ${APP_VERSION} · los datos nunca salen de tu dispositivo</p>
+    </div>
   `;
+
+  // Perfil
+  const nombreInput = $('#aj-nombre');
+  if (nombreInput) nombreInput.addEventListener('change', (e) => {
+    state.ajustes.nombre = e.target.value.trim();
+    state.ajustes.mod = Date.now();
+    guardarEstado();
+    toast('Nombre guardado');
+  });
 
   // Ingreso
   $('#aj-ingreso').addEventListener('change', (e) => {
@@ -2501,6 +3918,7 @@ function vistaAjustes(view) {
       ...state.categorias.map((c) => ({ t: 'categorias', id: c.id, mod: ahora })),
       ...state.holdings.map((h) => ({ t: 'holdings', id: h.id, mod: ahora })),
       ...state.cubos.map((c) => ({ t: 'cubos', id: c.id, mod: ahora })),
+      ...(state.objetivos || []).map((g) => ({ t: 'objetivos', id: g.id, mod: ahora })),
     ];
     const urlSync = state.ajustes.syncUrl, autoSync = state.ajustes.syncAuto, github = state.ajustes.github;
     state = seedState();
@@ -2587,6 +4005,11 @@ function vistaAjustes(view) {
 /* ============ Arranque ============ */
 document.querySelectorAll('#tabs .tab').forEach((b) => b.addEventListener('click', () => irTab(b.dataset.tab)));
 
+const quickAdd = $('#btn-quick-gasto');
+if (quickAdd) quickAdd.onclick = () => modalGasto(null);
+const brandHome = $('.brand');
+if (brandHome) brandHome.addEventListener('click', (e) => { e.preventDefault(); irTab('inicio'); });
+
 // Accesibilidad: activar botones "role=button" con teclado
 document.addEventListener('keydown', (e) => {
   const t = e.target;
@@ -2608,8 +4031,9 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 
 (() => {
   const h = location.hash.replace('#', '');
-  if (['gastos', 'objetivo', 'inversion', 'patrimonio', 'compartidos', 'analisis', 'ajustes'].includes(h)) {
-    ui.tab = h;
+  const tab = TAB_LEGACY[h] || h;
+  if (['inicio', 'gastos', 'patrimonio', 'analisis', 'objetivos', 'compartidos', 'ajustes'].includes(tab)) {
+    ui.tab = tab;
   }
   marcarTabActiva(ui.tab);
   render();
