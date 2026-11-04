@@ -1281,7 +1281,9 @@ async function ghLeer(cfg) {
     return ghEstado.remoto;
   }
   if (res.status === 404) { ghEstado.etag = null; ghEstado.sha = null; ghEstado.remoto = null; ghEstado.existe = false; return null; }
-  throw new Error('get ' + res.status);
+  const err = new Error('get ' + res.status);
+  err.status = res.status;
+  throw err;
 }
 
 async function ghGuardar(cfg, obj, intento = 0) {
@@ -1301,13 +1303,23 @@ async function ghGuardar(cfg, obj, intento = 0) {
     const remoto = await ghLeer(cfg);
     return ghGuardar(cfg, fusionarLocal(state, remoto || { v: 2 }), intento + 1);
   }
-  if (!res.ok) throw new Error('put ' + res.status);
+  if (!res.ok) {
+    const err = new Error('put ' + res.status);
+    err.status = res.status;
+    throw err;
+  }
   const j = await res.json();
   ghEstado.sha = j.content && j.content.sha;
   ghEstado.etag = null;
   ghEstado.existe = true;
   return obj;
 }
+
+const GH_ERRORES = {
+  401: 'Token inválido o caducado: genera otro y pégalo de nuevo',
+  403: 'GitHub rechaza el token (permisos Contents: Read and write o límite temporal)',
+  404: 'Repo no encontrado: revisa el nombre exacto (usuario/repo) o el acceso del token',
+};
 
 async function syncGitHub(forzar = false) {
   const cfg = state.ajustes.github;
@@ -1324,9 +1336,12 @@ async function syncGitHub(forzar = false) {
       subidoPrevio = contenidoSync();
       adoptarSync(fusionado);
     }
+    ultimoSyncOK = Date.now();
     actualizarEstadoSync();
-  } catch {
-    if (forzar) toast('No se pudo sincronizar con GitHub (¿repo y token correctos?)', 'error');
+  } catch (e) {
+    const msg = GH_ERRORES[e && e.status] || 'No se pudo conectar con GitHub (¿internet?)';
+    actualizarEstadoSync('⚠️ ' + msg);
+    if (forzar) toast(msg, 'error');
   }
 }
 
@@ -1339,6 +1354,7 @@ function syncProgramar() {
 let enSync = false;
 let syncPendiente = false;
 let subidoPrevio = null;
+let ultimoSyncOK = 0;
 
 function adoptarSync(rec) {
   const mia = { syncUrl: state.ajustes.syncUrl, syncAuto: state.ajustes.syncAuto, github: state.ajustes.github };
@@ -1355,6 +1371,10 @@ function adoptarSync(rec) {
 async function syncAhora(forzar = false) {
   if (ghModoActivo()) {
     if (enSync) { syncPendiente = true; return; }
+    if (forzar && Date.now() - ultimoSyncOK < 2500) {
+      toast('Ya se sincronizó hace un momento; espera unos segundos');
+      return;
+    }
     enSync = true;
     try {
       await syncGitHub(forzar);
@@ -1746,7 +1766,7 @@ function vistaAjustes(view) {
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
         <button class="btn small" id="btn-gh-probar" type="button">🔄 Sincronizar con GitHub</button>
       </div>
-      <p class="hint">Si lo configuras, se usa NUBE GITHUB y el servidor casero queda como respaldo. Crea el token en github.com → Settings → Developer settings → Fine-grained tokens.</p>
+      <p class="hint">Si lo configuras, se usa NUBE GITHUB y el servidor casero queda como respaldo. El token se guarda <strong>solo en este dispositivo</strong> (no se sincroniza ni se exporta). Crea el token en github.com → Settings → Developer settings → Fine-grained tokens.</p>
     </div>
 
     <div class="card">
@@ -1898,7 +1918,10 @@ function vistaAjustes(view) {
 
   // Datos
   $('#btn-export').onclick = () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    // El token y la config de sincronización son de cada dispositivo: no se exportan
+    const copia = JSON.parse(JSON.stringify(state));
+    if (copia.ajustes) { delete copia.ajustes.github; delete copia.ajustes.syncUrl; delete copia.ajustes.syncAuto; }
+    const blob = new Blob([JSON.stringify(copia, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `finanzas-backup-${hoyISO()}.json`;
@@ -1914,6 +1937,13 @@ function vistaAjustes(view) {
       try {
         const s = JSON.parse(reader.result);
         if (!s || typeof s !== 'object' || !Array.isArray(s.categorias)) throw new Error('formato');
+        // conservar la config de nube propia de este dispositivo
+        s.ajustes = {
+          ...(s.ajustes || {}),
+          github: state.ajustes.github,
+          syncUrl: state.ajustes.syncUrl,
+          syncAuto: state.ajustes.syncAuto,
+        };
         guardarEstado(s);
         toast('Datos importados'); render();
       } catch {
@@ -1934,11 +1964,12 @@ function vistaAjustes(view) {
       ...state.holdings.map((h) => ({ t: 'holdings', id: h.id, mod: ahora })),
       ...state.cubos.map((c) => ({ t: 'cubos', id: c.id, mod: ahora })),
     ];
-    const urlSync = state.ajustes.syncUrl, autoSync = state.ajustes.syncAuto;
+    const urlSync = state.ajustes.syncUrl, autoSync = state.ajustes.syncAuto, github = state.ajustes.github;
     state = seedState();
     state.eliminados = [...(state.eliminados || []), ...tombas];
     state.ajustes.syncUrl = urlSync;
     state.ajustes.syncAuto = autoSync;
+    state.ajustes.github = github;
     guardarEstado(); // se sincroniza el borrado a los demás dispositivos
     ui.month = currentMonthKey();
     toast('Todo borrado');
@@ -1962,12 +1993,21 @@ function vistaAjustes(view) {
 
   // Config GitHub (por dispositivo, no se sincroniza)
   const ghCampo = (id, clave, esUltimo = false) => {
-    $(id).addEventListener('change', (e) => {
+    const guardar = () => {
       const g = { ...(state.ajustes.github || {}) };
-      g[clave] = e.target.value.trim();
+      g[clave] = $(id).value.trim();
       state.ajustes.github = (g.repo || g.token || g.ruta) ? g : null;
       state.ajustes.mod = Date.now();
       guardarEstado(state, true);
+    };
+    // guarda también mientras se escribe (por si cierras la app sin salir del campo)
+    $(id).addEventListener('input', () => {
+      clearTimeout(ghCampo._t);
+      ghCampo._t = setTimeout(guardar, 400);
+    });
+    $(id).addEventListener('change', () => {
+      clearTimeout(ghCampo._t);
+      guardar();
       if (ghModoActivo() && esUltimo) syncAhora();
       toast(esUltimo ? 'Nube GitHub configurada' : 'Guardado');
     });
