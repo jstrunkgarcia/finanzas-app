@@ -3,7 +3,7 @@
 
 /* ============ Utilidades ============ */
 const $ = (sel, root = document) => root.querySelector(sel);
-const APP_VERSION = 'versión 15 · 4 nov 2026';
+const APP_VERSION = 'versión 16 · 4 nov 2026';
 const uid = () =>
   (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now().toString(36) + Math.random().toString(36).slice(2));
 
@@ -709,6 +709,23 @@ function modalGasto(idGasto = null) {
 }
 
 function hoyISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+
+/* Fuerza la actualización de la PWA sin borrar datos (localStorage intacto) */
+async function buscarActualizacion() {
+  toast('Buscando actualización…');
+  try {
+    await Promise.all(['./index.html', './app.js', './styles.css', './sw.js'].map((u) => fetch(u, { cache: 'reload' }).catch(() => null)));
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+    if (window.caches) {
+      const claves = await caches.keys();
+      await Promise.all(claves.map((k) => caches.delete(k)));
+    }
+  } catch (e) { /* recarga igualmente */ }
+  location.replace(location.pathname + '?v=' + Date.now());
+}
 
 /* ============ Vista: Objetivo Casa ============ */
 function vistaObjetivo(view) {
@@ -1429,6 +1446,8 @@ async function syncAhora(forzar = false) {
       adoptarSync(fusionado);
       subidoPrevio = contenidoSync();
     }
+    ultimoSyncOK = Date.now();
+    actualizarEstadoSync();
   } catch {
     if (forzar) toast('No se pudo sincronizar (¿servidor activo?, ¿URL correcta?)', 'error');
   } finally {
@@ -1478,8 +1497,10 @@ async function syncBajar() {
 function actualizarEstadoSync(extra = '') {
   const el = $('#sync-estado');
   if (!el) return;
-  const ts = state.syncT ? new Date(state.syncT).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-  el.textContent = extra || (ts ? `Lo más reciente en la nube: ${ts}` : 'Sin sincronizar todavía');
+  const ts = ultimoSyncOK
+    ? new Date(ultimoSyncOK).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+    : '';
+  el.textContent = extra || (ts ? `Última sincronización con la nube: ${ts}` : 'Aún no sincronizado en esta sesión');
 }
 
 /* ============ Vista: Análisis ============ */
@@ -1815,6 +1836,8 @@ function vistaAjustes(view) {
     <div class="card">
       <div class="card-title"><span>Instalar la app</span></div>
       <button class="btn full" id="btn-install" type="button" ${deferredInstall ? '' : 'disabled'}>📲 Instalar en este dispositivo</button>
+      <button class="btn secondary small full" id="btn-update" type="button" style="margin-top:10px">🔄 Buscar actualización de la app</button>
+      <p class="hint">Si has publicado cambios y este dispositivo sigue con la versión vieja, pulsa «Buscar actualización»: recarga la última versión <strong>sin borrar tus datos ni el token</strong>.</p>
       <p class="hint"><strong>Android:</strong> abre la web en Chrome → menú (⋮) → «Añadir a pantalla de inicio».<br>
       <strong>iPhone:</strong> abre la web en Safari → botón Compartir → «Añadir a pantalla de inicio».<br>
       <strong>Ordenador:</strong> en Chrome, icono de instalación en la barra de direcciones.</p>
@@ -2043,6 +2066,8 @@ function vistaAjustes(view) {
 
   // Instalación PWA
   const bi = $('#btn-install');
+  const bu = $('#btn-update');
+  if (bu) bu.onclick = buscarActualizacion;
   if (deferredInstall) {
     bi.disabled = false;
     bi.onclick = async () => {
