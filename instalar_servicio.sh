@@ -37,6 +37,7 @@ After=network.target
 
 [Service]
 WorkingDirectory=$RUTA_APP
+Environment=SYNC_TOKEN=${SYNC_TOKEN:-}
 ExecStart=/usr/bin/python3 $RUTA_APP/sync_server.py $PORT_SYNC
 Restart=always
 RestartSec=3
@@ -59,6 +60,7 @@ echo ""
 echo "   App (PC):         http://localhost:$PORT_APP"
 echo "   App (móvil):      http://${IP:-./0.}:$PORT_APP"
 echo "   Sync para móvil:  http://${IP:-./0.}:$PORT_SYNC   → Ajustes → Sincronizar"
+echo "   Token sync:       ${SYNC_TOKEN:-desactivado} (exporta SYNC_TOKEN antes de instalar para activarlo)"
 echo ""
 echo "Comandos útiles:"
 echo "   systemctl --user status finanzas-app finanzas-sync"

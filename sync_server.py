@@ -26,8 +26,11 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 DB_RUTA = os.path.join(DIR, 'finanzas_sync.db')
 JSON_VIEJO = os.path.join(DIR, 'sync_data.json')
 
-COLECCIONES = ('gastos', 'snapshots', 'categorias', 'holdings', 'cubos', 'personas', 'compartidosEventos', 'bizums', 'objetivos')
+COLECCIONES = ('gastos', 'snapshots', 'categorias', 'holdings', 'cubos', 'personas', 'compartidosEventos', 'bizums', 'objetivos', 'deudas', 'movimientos', 'recurrentes', 'presupuestosHistorial', 'seguros')
 TUMBA_MAX_MS = 90 * 24 * 3600 * 1000  # las lápidas de borrado viven 90 días
+TOKEN = os.environ.get('SYNC_TOKEN', '').strip()
+MAX_BYTES = 12 * 1024 * 1024  # 12 MB por subida
+MAX_VERSIONES = 500  # retención del historial
 
 bloqueo = threading.Lock()
 con = sqlite3.connect(DB_RUTA, check_same_thread=False)
@@ -59,9 +62,14 @@ def fusionar(cliente, servidor):
     # 2) colecciones id- negligible: mezcla por id respetando el orden del servidor
     for col in COLECCIONES:
         lista_srv = servidor.get(col) or []
+        if not isinstance(lista_srv, list):
+            lista_srv = []
         mapa = {x['id']: x for x in lista_srv if isinstance(x, dict) and 'id' in x}
         orden = [x['id'] for x in lista_srv if isinstance(x, dict) and 'id' in x]
-        for x in (cliente.get(col) or []):
+        lista_cli = cliente.get(col) or []
+        if not isinstance(lista_cli, list):
+            lista_cli = []
+        for x in lista_cli:
             if not (isinstance(x, dict) and 'id' in x):
                 continue
             viejo = mapa.get(x['id'])
@@ -111,6 +119,14 @@ _migrar_json_antiguo()
 class Manejador(BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.0'
 
+    def _autorizado(self):
+        if not TOKEN:
+            return True
+        return self.headers.get('X-Sync-Token', '') == TOKEN
+
+    def _no_autorizado(self):
+        self._vacio(401)
+
     def _json(self, datos, status=200):
         if isinstance(datos, bytes):
             crudo = datos
@@ -120,7 +136,7 @@ class Manejador(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, X-Sync-Token')
         self.send_header('Content-Length', str(len(crudo)))
         self.end_headers()
         self.wfile.write(crudo)
@@ -129,7 +145,7 @@ class Manejador(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, X-Sync-Token')
         self.send_header('Content-Length', '0')
         self.end_headers()
 
@@ -141,9 +157,14 @@ class Manejador(BaseHTTPRequestHandler):
             n = int(self.headers.get('Content-Length', 0))
         except ValueError:
             return b''
+        if n > MAX_BYTES:
+            return b''
         return self.rfile.read(n) if n > 0 else b''
 
     def do_GET(self):
+        if not self._autorizado():
+            self._no_autorizado()
+            return
         partes = urlparse(self.path)
         q = parse_qs(partes.query)
         if partes.path == '/api/state':
@@ -172,6 +193,9 @@ class Manejador(BaseHTTPRequestHandler):
         self.send_error(404)
 
     def do_POST(self):
+        if not self._autorizado():
+            self._no_autorizado()
+            return
         if self.path == '/api/state':
             crudo = self._leer_cuerpo()
             try:
@@ -190,9 +214,14 @@ class Manejador(BaseHTTPRequestHandler):
                 fila = con.execute('SELECT ts, cuerpo FROM estados ORDER BY id DESC LIMIT 1').fetchone()
                 servidor = json.loads(fila[1].decode('utf-8')) if fila else {}
                 merged = fusionar(cliente, servidor)
+                # Nunca guardar secretos/config de dispositivo en la nube
+                if isinstance(merged.get('ajustes'), dict):
+                    for clave in ('syncUrl', 'syncAuto', 'syncToken', 'github', 'pinHash'):
+                        merged['ajustes'].pop(clave, None)
                 merged['syncT'] = datetime.now(timezone.utc).isoformat()
                 guardado = json.dumps(merged, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
                 cur = con.execute('INSERT INTO estados (ts, cuerpo) VALUES (?, ?)', (merged['syncT'], guardado))
+                con.execute('DELETE FROM estados WHERE id NOT IN (SELECT id FROM estados ORDER BY id DESC LIMIT ?)', (MAX_VERSIONES,))
                 con.commit()
             print(f'[fusionado] versión #{cur.lastrowid} ({len(guardado)} bytes) a las {merged["syncT"]}')
             self._json(guardado)
@@ -244,6 +273,7 @@ def main():
     print('   desde el móvil: http://%s:%d  (misma red WiFi o VPN)' % (ip_local(), puerto))
     print('   base de datos:  %s' % DB_RUTA)
     print('   historial:      GET /api/versions · recuperar: POST /api/restore {"id":N}')
+    print('   token:          ' + ('ACTIVO (X-Sync-Token)' if TOKEN else 'desactivado (define SYNC_TOKEN para protegerlo)'))
     try:
         servidor.serve_forever()
     except KeyboardInterrupt:

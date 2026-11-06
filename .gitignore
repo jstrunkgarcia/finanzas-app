@@ -1,0 +1,21 @@
+# Datos financieros y personales: nunca al repo de la app
+finanzas_sync.db
+finanzas_sync.db-*
+sync_data.json
+*.db
+*.sqlite
+*.sqlite3
+
+# Plan personal (contiene sueldo, edad, ciudad y situación de pareja)
+Plan de ahorro e inversión · octubre 2026.html
+Plan de ahorro e inversión · octubre 2026.md
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# SO / editor
+.DS_Store
+Thumbs.db
+*.swp

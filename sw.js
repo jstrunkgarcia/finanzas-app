@@ -1,8 +1,9 @@
-const CACHE = 'finanzas-v23';
+const CACHE = 'finanzas-v25';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
+  './lib.js',
   './app.js',
   './manifest.json',
   './icons/icon-192.png',

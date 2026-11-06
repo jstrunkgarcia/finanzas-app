@@ -7,9 +7,11 @@
   <meta name="description" content="Control de gastos e inversión personal: presupuesto por categorías, seguimiento de aportes y patrimonio total." />
   <meta name="theme-color" content="#080a0c" />
   <meta name="color-scheme" content="dark" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.github.com http: https:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icons/icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="stylesheet" href="styles.css" />
@@ -46,6 +48,10 @@
         <span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><path d="M12 2v2M22 12h-2M12 20v2M2 12h2"/></svg></span>
         <span class="tab-label">Objetivos</span>
       </button>
+      <button class="tab" data-tab="plan" type="button">
+        <span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 15 4-5 3.5 2.5L20 6"/><path d="M15 6h6v6"/></svg></span>
+        <span class="tab-label">Plan</span>
+      </button>
       <button class="tab" data-tab="ajustes" type="button">
         <span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 12h2M10 12h10M4 17h8M16 17h4"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="14" cy="17" r="2"/></svg></span>
         <span class="tab-label">Ajustes</span>
@@ -63,6 +69,7 @@
   <div id="modal-root"></div>
   <div id="toast" role="status"></div>
 
+  <script src="lib.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

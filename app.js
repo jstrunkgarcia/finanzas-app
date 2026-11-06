@@ -3,7 +3,7 @@
 
 /* ============ Utilidades ============ */
 const $ = (sel, root = document) => root.querySelector(sel);
-const APP_VERSION = 'versión 23 · 4 nov 2026';
+const APP_VERSION = 'versión 25 · 6 nov 2026 · auditoría total';
 const uid = () =>
   (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now().toString(36) + Math.random().toString(36).slice(2));
 
@@ -88,63 +88,6 @@ function emojiPorIcono(nombre) {
   return '🎯';
 }
 
-function parseAmount(v) {
-  if (typeof v === 'number') return isFinite(v) ? Math.round(v * 100) / 100 : null;
-  const s = String(v || '').trim().replace(/\s/g, '').replace(',', '.');
-  if (!s) return null;
-  const n = parseFloat(s);
-  return isFinite(n) ? Math.round(n * 100) / 100 : null;
-}
-
-const eur = (n, decimales = 2) => {
-  const num = Number(n) || 0;
-  const partes = new Intl.NumberFormat('es-ES', {
-    minimumFractionDigits: decimales,
-    maximumFractionDigits: decimales,
-  }).format(Math.abs(num)).split(',');
-  // es-ES no agrupa los miles de 4 cifras; lo forzamos (1.300 en vez de 1300)
-  const entero = partes[0].replace(/\./g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return `${num < 0 ? '−' : ''}${entero}${partes[1] != null ? ',' + partes[1] : ''}\u00a0€`;
-};
-
-const eur0 = (n) => eur(n, 0);
-
-function fmtPct(p, { conSigno = true, decimales = 2 } = {}) {
-  if (p == null || !isFinite(p)) return '—';
-  const s = (p * 100).toFixed(decimales).replace('.', ',');
-  return conSigno && p > 0 ? `+${s} %` : `${s} %`;
-}
-
-function pctClass(p) {
-  if (p == null || !isFinite(p)) return '';
-  return p <= 0.70 ? 'pct-good' : p <= 1.0 ? 'pct-warn' : 'pct-bad';
-}
-
-/* Meses */
-const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-
-const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-const currentMonthKey = () => monthKey(new Date());
-const prevMonthKey = (mk) => { const [y, m] = mk.split('-').map(Number); return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`; };
-const nextMonthKey = (mk) => { const [y, m] = mk.split('-').map(Number); return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`; };
-
-function fmtMes(mk) {
-  const [y, m] = mk.split('-').map(Number);
-  return `${MESES[m - 1].charAt(0).toUpperCase() + MESES[m - 1].slice(1)} ${y}`;
-}
-
-function fmtDia(iso) {
-  const d = new Date(iso + 'T12:00:00');
-  const hoy = new Date();
-  const dia = `${d.getDate()} ${MESES_CORTOS[d.getMonth()]}`;
-  if (d.getFullYear() === hoy.getFullYear()) return dia;
-  return `${dia} ${d.getFullYear()}`;
-}
-
-function escapeHtml(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
 
 function toast(msg, tipo = '') {
   const t = $('#toast');
@@ -185,8 +128,9 @@ const STORAGE_KEY_VIEJA = 'finanzas-personal-v1';
 
 function seedState() {
   const mk = currentMonthKey();
+  const inicioMes = `${mk}-01`;
   return {
-    v: 2,
+    v: 3,
     ajustes: {
       nombre: '',
       ingreso: 1553.23,
@@ -204,17 +148,35 @@ function seedState() {
         precio: 300000,   // precio orientativo de la vivienda
         pctEntrada: 20,   // parte que paga el banco no
         pctGastos: 11,    // impuestos y gastos de compra (10–12 % según el informe)
-        margen: 0,        // margen mensual que pasas al fondo (informe: hasta 223,23 €)
+        margen: 0,        // margen mensual que pasas al fondo
         extraAnual: 2485.17, // compatibilidad; ahora se calcula desde «pagas»
-        fechaObjetivo: '2032-06',
+        fechaObjetivo: '2034-06',
       },
     },
+    plan: {
+      ingresoAnual: 21742,
+      gastoMensual: 250,
+      crecimientoSalarial: 2,
+      inflacion: 2,
+      rentabilidadCartera: 5,
+      rentabilidadCuenta: 3.04,
+      rentabilidadCuentaExceso: 2.53,
+      tramoCuenta: 50000,
+      comisionCartera: 0.2,
+      impuestoAhorro: true,
+      edadActual: 22,
+      edadJubilacion: 67,
+      tasaRetirada: 4,
+      colchonMeses: 6,
+      asignacionObjetivo: { efectivo: 30, rentaVariable: 60, rentaFija: 10, cripto: 0 },
+      hipoteca: { tipo: 3.5, plazo: 30, gastos: 11, entrada: 20, ingresoPareja: 0, ahorroPareja: 0, colchon: 5000, precio: 300000, fecha: '2034-06', alquiler: 0 },
+    },
     categorias: [
-      { id: 'c-ocio', nombre: 'Ocio social: amigos y pareja', presupuesto: 250, color: PALETA[0] },
-      { id: 'c-comidas', nombre: 'Comidas, cafés y pequeños gastos diarios', presupuesto: 90, color: PALETA[3] },
-      { id: 'c-transporte', nombre: 'Transporte, móvil y fijos', presupuesto: 30, color: PALETA[2] },
-      { id: 'c-compras', nombre: 'Compras personales y caprichos', presupuesto: 100, color: PALETA[1] },
-      { id: 'c-viajes', nombre: 'Viajes, regalos e irregulares', presupuesto: 50, color: PALETA[4] },
+      { id: 'c-ocio', nombre: 'Ocio social: amigos y pareja', presupuesto: 250, color: PALETA[0], tipo: 'variable' },
+      { id: 'c-comidas', nombre: 'Comidas, cafés y pequeños gastos diarios', presupuesto: 90, color: PALETA[3], tipo: 'variable' },
+      { id: 'c-transporte', nombre: 'Transporte, móvil y fijos', presupuesto: 30, color: PALETA[2], tipo: 'fijo' },
+      { id: 'c-compras', nombre: 'Compras personales y caprichos', presupuesto: 100, color: PALETA[1], tipo: 'variable' },
+      { id: 'c-viajes', nombre: 'Viajes, regalos e irregulares', presupuesto: 50, color: PALETA[4], tipo: 'irregular' },
     ],
     gastos: [],
     cubos: [
@@ -225,13 +187,13 @@ function seedState() {
       { id: 'jubilacion', nombre: 'Jubilación', objetivo: 0 },
     ],
     holdings: [
-      { id: 'h-ibercaja', nombre: 'Día a día (Ibercaja)', cubo: 'diaadia', plan: 0 },
-      { id: 'h-emergencia', nombre: 'Emergencia (Trade Republic · efectivo)', cubo: 'emergencia', plan: 0 },
+      { id: 'h-ibercaja', nombre: 'Día a día (Ibercaja)', cubo: 'diaadia', plan: 0, entidad: 'Ibercaja', tipo: 'efectivo', clase: 'efectivo', moneda: 'EUR', saldoBase: 1500, fechaBase: inicioMes, autoNomina: true, diaCobro: 1 },
+      { id: 'h-emergencia', nombre: 'Emergencia (Trade Republic · efectivo)', cubo: 'emergencia', plan: 0, entidad: 'Trade Republic', tipo: 'efectivo', clase: 'efectivo', moneda: 'EUR', saldoBase: 4500, fechaBase: inicioMes },
       // Vivienda y emergencia comparten cuenta en Trade Republic: la app lleva el reparto anotado
-      { id: 'h-vivienda', nombre: 'Vivienda (Trade Republic · efectivo)', cubo: 'vivienda', plan: 750 },
+      { id: 'h-vivienda', nombre: 'Vivienda (Trade Republic · efectivo)', cubo: 'vivienda', plan: 750, entidad: 'Trade Republic', tipo: 'efectivo', clase: 'efectivo', moneda: 'EUR', saldoBase: 3000, fechaBase: inicioMes },
       // La partida de viajes no se pasa a vivienda: se acumula «anotada como viajes»
-      { id: 'h-viajes', nombre: 'Viajes y regalos (Trade Republic · efectivo)', cubo: 'viajes', plan: 50 },
-      { id: 'h-etf', nombre: 'ETF FTSE All-World (jubilación)', cubo: 'jubilacion', plan: 50 },
+      { id: 'h-viajes', nombre: 'Viajes y regalos (Trade Republic · efectivo)', cubo: 'viajes', plan: 50, entidad: 'Trade Republic', tipo: 'efectivo', clase: 'efectivo', moneda: 'EUR', saldoBase: 0, fechaBase: inicioMes },
+      { id: 'h-etf', nombre: 'ETF FTSE All-World (jubilación)', cubo: 'jubilacion', plan: 50, entidad: 'Trade Republic', tipo: 'inversion', clase: 'rentaVariable', moneda: 'EUR', isin: 'IE00BK5BQT80', unidades: 0, precio: 0, comision: 0.2, saldoBase: 1000, fechaBase: inicioMes },
     ],
     // Primer registro: valores iniciales del plan (capital base). Editable desde la app.
     snapshots: [
@@ -241,6 +203,12 @@ function seedState() {
     compartidosEventos: [],
     bizums: [],
     objetivos: [],
+    deudas: [],
+    movimientos: [],
+    recurrentes: [],
+    presupuestosHistorial: [],
+    seguros: [],
+    analisisDescartados: [],
     eliminados: [],
   };
 }
@@ -259,53 +227,209 @@ function tumba(tipo, id) {
   state.eliminados.push({ t: tipo, id, mod: Date.now() });
 }
 
+/* ============ Estado: normalización y migraciones ============ */
+function inferirEntidad(h) {
+  const n = String((h && h.nombre) || '').toLowerCase();
+  if (/ibercaja/.test(n)) return 'Ibercaja';
+  if (/trade republic|trade_republic/.test(n)) return 'Trade Republic';
+  if (/myinvestor/.test(n)) return 'MyInvestor';
+  if (/openbank/.test(n)) return 'OpenBank';
+  if (/bankinter/.test(n)) return 'Bankinter';
+  if (/revolut/.test(n)) return 'Revolut';
+  if (/indexa/.test(n)) return 'Indexa Capital';
+  return 'Otra';
+}
+
+function inferirTipoHolding(h) {
+  if (h && h.tipo) return h.tipo;
+  if (h && h.cubo === 'jubilacion') return 'inversion';
+  if (h && /etf|fondo|bolsa|acción|accion|cripto|bitcoin/i.test(h.nombre || '')) return 'inversion';
+  if (h && /inmueble|vivienda|piso|casa/i.test(h.nombre || '')) return 'inmueble';
+  return 'efectivo';
+}
+
+function inferirClaseHolding(h) {
+  if (h && h.clase) return h.clase;
+  const n = String((h && h.nombre) || '').toLowerCase();
+  if (/renta fija|bono|bonos|monetario|depósito|deposito/i.test(n)) return 'rentaFija';
+  if (/cripto|bitcoin|ethereum/i.test(n)) return 'cripto';
+  if (/inmueble|vivienda|piso|casa/i.test(n)) return 'inmueble';
+  if (inferirTipoHolding(h) === 'inversion') return 'rentaVariable';
+  return 'efectivo';
+}
+
+function normalizarEstado(entrada) {
+  const def = seedState();
+  const s = (entrada && typeof entrada === 'object') ? entrada : def;
+  s.v = 3;
+
+  s.ajustes = { ...def.ajustes, ...(s.ajustes || {}) };
+  s.ajustes.pagas = { ...def.ajustes.pagas, ...(s.ajustes.pagas || {}) };
+  s.ajustes.pagas.reparto = { ...def.ajustes.pagas.reparto, ...(s.ajustes.pagas.reparto || {}) };
+  s.ajustes.objetivoCasa = { ...def.ajustes.objetivoCasa, ...(s.ajustes.objetivoCasa || {}) };
+  s.ajustes.nombre = typeof s.ajustes.nombre === 'string' ? s.ajustes.nombre : '';
+  s.ajustes.diaCobro = Math.min(31, Math.max(1, +s.ajustes.diaCobro || 1));
+  s.ajustes.cuentaIbercaja = s.ajustes.cuentaIbercaja || null;
+
+  s.plan = { ...def.plan, ...(s.plan || {}) };
+  s.plan.asignacionObjetivo = { ...def.plan.asignacionObjetivo, ...(s.plan.asignacionObjetivo || {}) };
+  s.plan.hipoteca = { ...def.plan.hipoteca, ...(s.plan.hipoteca || {}) };
+  for (const k of ['ingresoAnual', 'gastoMensual', 'crecimientoSalarial', 'inflacion', 'rentabilidadCartera', 'rentabilidadCuenta', 'rentabilidadCuentaExceso', 'tramoCuenta', 'comisionCartera', 'edadActual', 'edadJubilacion', 'tasaRetirada', 'colchonMeses']) {
+    if (!isFinite(+s.plan[k])) s.plan[k] = def.plan[k];
+    else s.plan[k] = +s.plan[k];
+  }
+  for (const k of ['tipo', 'plazo', 'gastos', 'entrada', 'ingresoPareja', 'ahorroPareja', 'colchon', 'precio', 'alquiler']) {
+    if (!isFinite(+s.plan.hipoteca[k])) s.plan.hipoteca[k] = def.plan.hipoteca[k];
+    else s.plan.hipoteca[k] = +s.plan.hipoteca[k];
+  }
+  s.plan.impuestoAhorro = s.plan.impuestoAhorro !== false;
+
+  s.categorias = (Array.isArray(s.categorias) && s.categorias.length ? s.categorias : def.categorias)
+    .map((c, i) => ({
+      ...c,
+      presupuesto: Math.max(0, +c.presupuesto || 0),
+      tipo: c.tipo || 'variable',
+      color: c.color || PALETA[i % PALETA.length],
+    }));
+
+  s.cubos = Array.isArray(s.cubos) && s.cubos.length ? s.cubos : def.cubos;
+  s.holdings = (Array.isArray(s.holdings) && s.holdings.length ? s.holdings : def.holdings)
+    .map((h) => {
+      const tipo = inferirTipoHolding(h);
+      return {
+        ...h,
+        cubo: h.cubo || 'diaadia',
+        plan: Math.max(0, +h.plan || 0),
+        entidad: h.entidad || inferirEntidad(h),
+        tipo,
+        clase: inferirClaseHolding({ ...h, tipo }),
+        moneda: h.moneda || 'EUR',
+        comision: h.comision != null && isFinite(+h.comision) ? +h.comision : (tipo === 'inversion' ? 0.2 : 0),
+        unidades: h.unidades != null && isFinite(+h.unidades) ? +h.unidades : 0,
+        precio: h.precio != null && isFinite(+h.precio) ? +h.precio : 0,
+        snapshotUnidades: (h.snapshotUnidades && typeof h.snapshotUnidades === 'object') ? h.snapshotUnidades : {},
+      };
+    });
+
+  s.snapshots = (Array.isArray(s.snapshots) ? s.snapshots : []).map((sn) => ({
+    ...sn,
+    id: sn.id || sn.month,
+    month: sn.month,
+    valores: sn.valores || {},
+    aportes: sn.aportes || {},
+  }));
+
+  const ultimoSnap = s.snapshots.slice().sort((a, b) => String(a.month).localeCompare(String(b.month))).pop();
+  for (const h of s.holdings) {
+    if (h.id === 'h-ibercaja' && h.autoNomina == null) h.autoNomina = true;
+    if (h.id === 'h-ibercaja' && h.diaCobro == null) h.diaCobro = Math.min(31, Math.max(1, +s.ajustes.diaCobro || 1));
+    if (!isFinite(+h.saldoBase)) {
+      const v = ultimoSnap && ultimoSnap.valores ? ultimoSnap.valores[h.id] : null;
+      h.saldoBase = v != null && isFinite(+v) ? +v : 0;
+    }
+    if (!h.fechaBase || !/^\d{4}-\d{2}-\d{2}$/.test(String(h.fechaBase))) {
+      h.fechaBase = `${(ultimoSnap && ultimoSnap.month) || currentMonthKey()}-01`;
+    }
+    if (!isFinite(+h.fechaBaseTs)) h.fechaBaseTs = new Date(`${h.fechaBase}T00:00:00`).getTime();
+  }
+
+  s.gastos = (Array.isArray(s.gastos) ? s.gastos : []).map((g) => ({
+    ...g,
+    monto: Math.abs(+g.monto || 0),
+    catId: g.catId || '__none',
+    fecha: /^\d{4}-\d{2}-\d{2}$/.test(String(g.fecha || '')) ? g.fecha : hoyISO(),
+    cuentaId: g.cuentaId || 'h-ibercaja',
+    creado: +g.creado || Date.now(),
+  }));
+
+  s.personas = (Array.isArray(s.personas) ? s.personas : []).map((p) => ({ ...p, nombre: String(p.nombre || '').trim() || 'Sin nombre' }));
+  s.compartidosEventos = (Array.isArray(s.compartidosEventos) ? s.compartidosEventos : []).map((ev) => ({
+    ...ev,
+    importe: Math.abs(+ev.importe || 0),
+    fecha: /^\d{4}-\d{2}-\d{2}$/.test(String(ev.fecha || '')) ? ev.fecha : hoyISO(),
+    cuentaId: ev.cuentaId || 'h-ibercaja',
+    participantes: Array.isArray(ev.participantes) ? ev.participantes : [],
+    creado: +ev.creado || Date.now(),
+  }));
+  s.bizums = (Array.isArray(s.bizums) ? s.bizums : []).map((b) => ({
+    ...b,
+    importe: +b.importe || 0,
+    fecha: /^\d{4}-\d{2}-\d{2}$/.test(String(b.fecha || '')) ? b.fecha : hoyISO(),
+    cuentaId: b.cuentaId || 'h-ibercaja',
+    creado: +b.creado || Date.now(),
+  }));
+  s.objetivos = (Array.isArray(s.objetivos) ? s.objetivos : []).map((g) => ({ ...g, monto: Math.max(0, +g.monto || 0) }));
+
+  s.deudas = (Array.isArray(s.deudas) ? s.deudas : []).map((d) => ({
+    ...d,
+    saldo: Math.max(0, +d.saldo || 0),
+    tipoInteres: Math.max(0, +d.tipoInteres || 0),
+    cuota: Math.max(0, +d.cuota || 0),
+    plazoMeses: Math.max(0, +d.plazoMeses || 0),
+    creado: +d.creado || Date.now(),
+  }));
+
+  s.movimientos = (Array.isArray(s.movimientos) ? s.movimientos : []).map((m) => ({
+    ...m,
+    importe: Math.abs(+m.importe || 0),
+    fecha: /^\d{4}-\d{2}-\d{2}$/.test(String(m.fecha || '')) ? m.fecha : hoyISO(),
+    cuentaId: m.cuentaId || 'h-ibercaja',
+    creado: +m.creado || Date.now(),
+  }));
+
+  s.recurrentes = (Array.isArray(s.recurrentes) ? s.recurrentes : []).map((r) => ({
+    ...r,
+    importe: Math.abs(+r.importe || 0),
+    frecuencia: r.frecuencia === 'anual' ? 'anual' : 'mensual',
+    dia: Math.min(31, Math.max(1, +r.dia || 1)),
+    mes: Math.min(12, Math.max(1, +r.mes || 1)),
+    activo: r.activo !== false,
+    creado: +r.creado || Date.now(),
+  }));
+
+  s.presupuestosHistorial = (Array.isArray(s.presupuestosHistorial) ? s.presupuestosHistorial : []).map((p) => ({
+    ...p,
+    id: p.id || `${p.catId}-${p.mes}`,
+    importe: Math.max(0, +p.importe || 0),
+  }));
+  if (!s.presupuestosHistorial.length) {
+    const mk = currentMonthKey();
+    for (const c of s.categorias) {
+      s.presupuestosHistorial.push({ id: `${c.id}-${mk}`, catId: c.id, mes: mk, importe: +c.presupuesto || 0, mod: 0 });
+    }
+  }
+
+  s.seguros = (Array.isArray(s.seguros) ? s.seguros : []).map((x) => ({
+    ...x,
+    primaAnual: Math.max(0, +x.primaAnual || 0),
+    creado: +x.creado || Date.now(),
+  }));
+
+  s.analisisDescartados = Array.isArray(s.analisisDescartados) ? s.analisisDescartados.filter((x) => typeof x === 'string') : [];
+  s.eliminados = Array.isArray(s.eliminados) ? s.eliminados : [];
+  return s;
+}
+
 function cargarEstado() {
   try { localStorage.removeItem(STORAGE_KEY_VIEJA); } catch (e) {}
+  let raw = null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const s = JSON.parse(raw);
       if (s && Array.isArray(s.categorias)) {
-        s.ajustes.nombre = typeof s.ajustes.nombre === 'string' ? s.ajustes.nombre : '';
-        s.ajustes.diaCobro = Math.min(31, Math.max(1, +s.ajustes.diaCobro || 1));
-        s.ajustes.cuentaIbercaja = s.ajustes.cuentaIbercaja || null;
-        s.ajustes.objetivoCasa = s.ajustes.objetivoCasa || seedState().ajustes.objetivoCasa;
-        s.ajustes.pagas = s.ajustes.pagas || seedState().ajustes.pagas;
-        s.eliminados = Array.isArray(s.eliminados) ? s.eliminados : [];
-        s.personas = Array.isArray(s.personas) ? s.personas : [];
-        s.compartidosEventos = Array.isArray(s.compartidosEventos) ? s.compartidosEventos : [];
-        s.bizums = Array.isArray(s.bizums) ? s.bizums : [];
-        s.objetivos = Array.isArray(s.objetivos) ? s.objetivos : [];
-        if (s.ajustes.github && s.ajustes.github.repo) {
-          s.ajustes.github.repo = normalizarRepo(s.ajustes.github.repo);
+        const normalizado = normalizarEstado(s);
+        if (normalizado.ajustes.github && normalizado.ajustes.github.repo) {
+          normalizado.ajustes.github.repo = normalizarRepo(normalizado.ajustes.github.repo);
         }
-        for (const sn of s.snapshots || []) if (!sn.id) sn.id = sn.month;
-        // Migración informe v3 (15-oct-2026): vivienda 750 €, presupuestos reales, nueva bolsa de viajes
-        if (!s.cubos.some((c) => c.id === 'viajes')) s.cubos.push({ id: 'viajes', nombre: 'Viajes y regalos', objetivo: 0 });
-        if (!s.holdings.some((h) => h.id === 'h-viajes')) {
-          s.holdings.push({ id: 'h-viajes', nombre: 'Viajes y regalos (Trade Republic · efectivo)', cubo: 'viajes', plan: 50 });
-        }
-        for (const h of s.holdings || []) {
-          if (h.id === 'h-vivienda' && /cuenta remunerada/i.test(h.nombre)) h.nombre = 'Vivienda (Trade Republic · efectivo)';
-          if (h.id === 'h-emergencia' && /Fondo de emergencia/i.test(h.nombre)) h.nombre = 'Emergencia (Trade Republic · efectivo)';
-          // 450 era el plan del informe anterior; si no lo has tocado, subir a 750
-          if (h.id === 'h-vivienda' && (+h.plan || 0) === 450) h.plan = 750;
-        }
-        for (const c of s.categorias || []) {
-          // solo si siguen con los valores por defecto del informe anterior
-          if (c.id === 'c-transporte' && (+c.presupuesto || 0) === 180) c.presupuesto = 30;
-          if (c.id === 'c-comidas' && (+c.presupuesto || 0) === 150) c.presupuesto = 90;
-          if (c.id === 'c-viajes' && (+c.presupuesto || 0) === 150) c.presupuesto = 50;
-        }
-        // los meses ya registrados también deben incluir la nueva bolsa de viajes (0 €)
-        for (const sn of s.snapshots || []) {
-          if (sn.valores && sn.valores['h-viajes'] == null) { sn.valores['h-viajes'] = 0; sn.aportes['h-viajes'] = 0; }
-        }
-        return s;
+        guardarEstado(normalizado, true);
+        return normalizado;
       }
     }
-  } catch (e) { /* estado corrupto: se reseed */ }
-  const s = seedState();
+  } catch (e) {
+    try { if (raw) localStorage.setItem(STORAGE_KEY + '-error', raw); } catch (e2) {}
+  }
+  const s = normalizarEstado(seedState());
   guardarEstado(s);
   return s;
 }
@@ -333,6 +457,32 @@ function totalGastado(mk) {
 
 function presupuestoTotal() {
   return state.categorias.reduce((a, c) => a + (+c.presupuesto || 0), 0);
+}
+
+/* Presupuesto vigente de una categoría en un mes concreto (histórico). */
+function presupuestoCategoria(catId, mk) {
+  const hist = (state.presupuestosHistorial || [])
+    .filter((p) => p.catId === catId && String(p.mes) <= String(mk))
+    .sort((a, b) => String(b.mes).localeCompare(String(a.mes)));
+  if (hist.length) return +hist[0].importe || 0;
+  const c = catPorId(catId);
+  return c ? +c.presupuesto || 0 : 0;
+}
+
+function presupuestoTotalMes(mk) {
+  return state.categorias.reduce((a, c) => a + presupuestoCategoria(c.id, mk), 0);
+}
+
+function registrarPresupuesto(catId, importe, mk = currentMonthKey()) {
+  state.presupuestosHistorial = state.presupuestosHistorial || [];
+  const existente = state.presupuestosHistorial.find((p) => p.catId === catId && p.mes === mk);
+  const valor = Math.max(0, +importe || 0);
+  if (existente) {
+    existente.importe = valor;
+    stamp(existente);
+  } else {
+    state.presupuestosHistorial.push(stamp({ id: `${catId}-${mk}`, catId, mes: mk, importe: valor }));
+  }
 }
 
 /* ============ Derivados: gastos compartidos / Bizum ============ */
@@ -394,29 +544,23 @@ function analisisPeriodo(n) {
   return meses.map((mk) => {
     const gastos = gastosDelMes(mk);
     const porCat = { __none: 0 };
-    for (const c of state.categorias) porCat[c.id] = 0;
+    const porCatPresu = {};
+    for (const c of state.categorias) { porCat[c.id] = 0; porCatPresu[c.id] = presupuestoCategoria(c.id, mk); }
     let total = 0;
     for (const g of gastos) {
       const id = state.categorias.some((c) => c.id === g.catId) ? g.catId : '__none';
       porCat[id] = (porCat[id] || 0) + g.monto;
       total += g.monto;
     }
-    return { mk, porCat, total, n: gastos.length };
+    return { mk, porCat, porCatPresu, presupuesto: presupuestoTotalMes(mk), total, n: gastos.length };
   });
-}
-
-function mediana(nums) {
-  if (!nums.length) return 0;
-  const s = [...nums].sort((a, b) => a - b);
-  const m = Math.floor(s.length / 2);
-  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
 function etiquetaMes(mk) {
   return `${MESES_CORTOS[+mk.split('-')[1] - 1]} ${mk.slice(2, 4)}`;
 }
 
-/* ============ Derivados: inversión ============ */
+/* ============ Derivados: inversión y patrimonio ============ */
 function snapPorMes(mk) { return state.snapshots.find((s) => s.month === mk); }
 
 function mesesRegistrados() {
@@ -424,6 +568,7 @@ function mesesRegistrados() {
 }
 
 function holdingPorId(id) { return state.holdings.find((h) => h.id === id); }
+function holdingsActivos() { return state.holdings.filter((h) => !h.archivada); }
 
 /* Serie por holding: [{month, valor (antes aporte), aporte, post}] */
 function serieHolding(hid) {
@@ -437,7 +582,7 @@ function serieHolding(hid) {
     });
 }
 
-function statsHolding(hid) {
+function statsHoldingSnapshot(hid) {
   const serie = serieHolding(hid);
   if (!serie.length) return { valorActual: 0, aportado: 0, roi: null, serie };
   const primero = serie[0];
@@ -446,6 +591,115 @@ function statsHolding(hid) {
   const valorActual = ultimo.post;
   const roi = aportado > 0 ? (valorActual - aportado) / aportado : null;
   return { valorActual, aportado, roi, serie, ultimo, primero };
+}
+
+function esCuentaEfectivo(h) {
+  return !!h && (h.tipo === 'efectivo' || h.tipo === 'cuenta' || h.tipo === 'ahorro');
+}
+
+function esInversion(h) {
+  return !!h && h.tipo === 'inversion';
+}
+
+function gastosVinculadosCompartidos() {
+  const set = new Set();
+  for (const ev of state.compartidosEventos || []) if (ev.gastoId) set.add(ev.gastoId);
+  return set;
+}
+
+/* Nómina y pagas automáticas opcionales de una cuenta de efectivo.
+   Solo se aplican desde su fechaBase; si cambias el salario, reconcilia la cuenta. */
+function ingresosAutomaticosCuenta(h) {
+  if (!h || !h.autoNomina) return { nominas: 0, pagas: 0 };
+  const base = new Date(`${h.fechaBase || '1970-01-01'}T00:00:00`);
+  if (!isFinite(base.getTime())) return { nominas: 0, pagas: 0 };
+  const ingreso = +state.ajustes.ingreso || 0;
+  const hoy = new Date();
+  const dia = Math.min(31, Math.max(1, +h.diaCobro || +state.ajustes.diaCobro || 1));
+  let y = base.getFullYear(), m = base.getMonth(), nominas = 0, pagas = 0;
+  while (y < hoy.getFullYear() || (y === hoy.getFullYear() && m <= hoy.getMonth())) {
+    const ultimoDia = new Date(y, m + 1, 0).getDate();
+    const pago = new Date(y, m, Math.min(dia, ultimoDia));
+    if (pago > base && pago <= hoy) {
+      nominas += ingreso;
+    }
+    m += 1;
+    if (m === 12) { m = 0; y += 1; }
+  }
+  return { nominas, pagas };
+}
+
+/* Un movimiento es posterior al saldo base si su fecha es mayor, o si es del mismo
+   día pero se creó después de la reconciliación (fechaBaseTs). */
+function posteriorA(fecha, creado, h) {
+  const desde = String((h && h.fechaBase) || '1970-01-01');
+  const f = String(fecha || '');
+  if (f > desde) return true;
+  if (f < desde) return false;
+  const desdeTs = +((h && h.fechaBaseTs) || 0) || new Date(`${desde}T00:00:00`).getTime();
+  return (+creado || 0) > desdeTs;
+}
+
+/* Saldo derivado de una cuenta de efectivo: base + nóminas/pagas + ingresos
+   − gastos − compartidos pagados + bizums + traspasos/retiradas. */
+function saldoCuenta(hid) {
+  const h = holdingPorId(hid);
+  if (!h || !esCuentaEfectivo(h)) return 0;
+  const desde = String(h.fechaBase || '1970-01-01');
+  let saldo = +h.saldoBase || 0;
+  const auto = ingresosAutomaticosCuenta(h);
+  saldo += auto.nominas + auto.pagas;
+  const vinculados = gastosVinculadosCompartidos();
+
+  for (const g of state.gastos || []) {
+    if ((g.cuentaId || 'h-ibercaja') !== hid) continue;
+    if (!posteriorA(g.fecha, g.creado, h)) continue;
+    if (vinculados.has(g.id)) continue;
+    saldo -= +g.monto || 0;
+  }
+
+  for (const ev of state.compartidosEventos || []) {
+    if ((ev.cuentaId || 'h-ibercaja') !== hid) continue;
+    if (!posteriorA(ev.fecha, ev.creado, h)) continue;
+    // Si pagué yo, sale el importe completo; la parte ajena queda como derecho de cobro.
+    if (ev.pagador === 'yo') saldo -= +ev.importe || 0;
+  }
+
+  for (const b of state.bizums || []) {
+    if ((b.cuentaId || 'h-ibercaja') !== hid) continue;
+    if (!posteriorA(b.fecha, b.creado, h)) continue;
+    saldo += +b.importe || 0; // + me pagan, − pago
+  }
+
+  for (const m of state.movimientos || []) {
+    const fecha = String(m.fecha || '');
+    const tipo = m.tipo;
+    const importe = +m.importe || 0;
+    if (m.cuentaId === hid && posteriorA(fecha, m.creado, h)) {
+      if (tipo === 'ingreso' || tipo === 'retirada' || tipo === 'devolucion' || tipo === 'dividendo') saldo += importe;
+      else if (tipo === 'gasto' || tipo === 'inversion' || tipo === 'pagoDeuda' || tipo === 'traspaso') saldo -= importe;
+    }
+    if (m.cuentaDestinoId === hid && posteriorA(fecha, m.creado, h) && tipo === 'traspaso') saldo += importe;
+  }
+
+  return Math.round(saldo * 100) / 100;
+}
+
+function valorHolding(hid) {
+  const h = holdingPorId(hid);
+  if (!h) return 0;
+  if (esInversion(h) && +h.unidades > 0 && +h.precio > 0) {
+    return Math.round((+h.unidades * +h.precio) * 100) / 100;
+  }
+  if (esCuentaEfectivo(h)) return saldoCuenta(hid);
+  return statsHoldingSnapshot(hid).valorActual;
+}
+
+function statsHolding(hid) {
+  const st = statsHoldingSnapshot(hid);
+  const h = holdingPorId(hid);
+  if (esCuentaEfectivo(h)) return { ...st, valorActual: valorHolding(hid), roi: null, aportado: 0 };
+  return { ...st, valorActual: valorHolding(hid) };
 }
 
 /* Rendimiento mensual de un holding: variación del valor descontando aportaciones */
@@ -458,10 +712,11 @@ function perfHolding(hid, mk) {
   return (serie[i].valor - prevPost) / prevPost;
 }
 
-/* Serie agregada del patrimonio */
+/* Serie agregada del patrimonio. Los meses históricos salen de snapshots;
+   el último punto se ancla al patrimonio actual (incluye saldos derivados). */
 function seriePatrimonio() {
   const meses = mesesRegistrados();
-  return meses.map((mk) => {
+  const serie = meses.map((mk) => {
     const s = snapPorMes(mk);
     let post = 0, pre = 0;
     for (const h of state.holdings) {
@@ -470,169 +725,278 @@ function seriePatrimonio() {
     }
     return { month: mk, valor: pre, post };
   });
+  const totalActual = saldosActuales().total;
+  const mkActual = currentMonthKey();
+  if (!serie.length) return [{ month: mkActual, valor: totalActual, post: totalActual }];
+  const ultimo = serie[serie.length - 1];
+  if (ultimo.month === mkActual) ultimo.post = totalActual;
+  else serie.push({ month: mkActual, valor: totalActual, post: totalActual });
+  return serie;
 }
 
 function statsPatrimonio() {
   const serie = seriePatrimonio();
-  if (!serie.length) return { total: 0, aportado: 0, roi: null, perfMes: null, serie };
+  const total = saldosActuales().total;
+  if (!serie.length) return { total, aportado: 0, roi: null, perfMes: null, serie, ultimo: null, primero: null };
   const primero = serie[0];
   const ultimo = serie[serie.length - 1];
-  let aportado = primero.valor;
+  let aportado = +primero.valor || 0;
   for (const mk of mesesRegistrados()) {
     const s = snapPorMes(mk);
     for (const h of state.holdings) if (s.valores[h.id] != null) aportado += +s.aportes[h.id] || 0;
   }
-  const roi = aportado > 0 ? (ultimo.post - aportado) / aportado : null;
-  const perfMes = serie.length > 1 && serie[serie.length - 2].post > 0
-    ? (ultimo.valor - serie[serie.length - 2].post) / serie[serie.length - 2].post
-    : null;
-  return { total: ultimo.post, aportado, roi, perfMes, serie, ultimo, primero };
+  const roi = aportado > 0 ? (total - aportado) / aportado : null;
+  const prev = serie.length > 1 ? serie[serie.length - 2] : null;
+  const perfMes = prev && prev.post > 0 ? (total - prev.post) / prev.post : null;
+  return { total, aportado, roi, perfMes, serie, ultimo, primero };
 }
 
 function distribucionCubos() {
-  const stats = statsPatrimonio();
+  const total = statsPatrimonio().total;
   return state.cubos.map((cubo) => {
-    let total = 0;
-    for (const h of state.holdings) {
+    let suma = 0;
+    for (const h of holdingsActivos()) {
       if (h.cubo !== cubo.id) continue;
-      total += statsHolding(h.id).valorActual;
+      suma += valorHolding(h.id);
     }
-    return { ...cubo, total, pct: stats.total > 0 ? total / stats.total : 0 };
-  }).filter((b) => b.total > 0 || true);
+    return { ...cubo, total: suma, pct: total > 0 ? suma / total : 0 };
+  }).filter((b) => b.total > 0);
 }
 
-/* ============ Cuenta Ibercaja: saldo derivado ============ */
+function distribucionEntidades() {
+  const mapa = {};
+  for (const h of holdingsActivos()) {
+    const entidad = h.entidad || 'Otra';
+    mapa[entidad] = (mapa[entidad] || 0) + valorHolding(h.id);
+  }
+  return Object.entries(mapa)
+    .map(([entidad, total]) => ({ entidad, total }))
+    .filter((x) => x.total > 0)
+    .sort((a, b) => b.total - a.total);
+}
+
+function distribucionClases() {
+  const mapa = {};
+  for (const h of holdingsActivos()) {
+    const clase = h.clase || (esInversion(h) ? 'rentaVariable' : 'efectivo');
+    mapa[clase] = (mapa[clase] || 0) + valorHolding(h.id);
+  }
+  const total = Object.values(mapa).reduce((a, b) => a + b, 0);
+  return Object.entries(mapa)
+    .map(([clase, valor]) => ({ clase, valor, pct: total > 0 ? valor / total : 0 }))
+    .filter((x) => x.valor > 0)
+    .sort((a, b) => b.valor - a.valor);
+}
+
 function holdingIbercaja() {
-  return state.holdings.find((h) => h.id === 'h-ibercaja') || state.holdings.find((h) => h.cubo === 'diaadia') || null;
+  return holdingsActivos().find((h) => h.id === 'h-ibercaja') || holdingsActivos().find((h) => h.cubo === 'diaadia') || null;
 }
 
-function totalAportesInversion() {
-  const iber = holdingIbercaja();
-  let total = 0;
-  for (const sn of state.snapshots || []) {
-    const ap = sn.aportes || {};
-    for (const h of state.holdings || []) {
-      if (iber && h.id === iber.id) continue;
-      total += +ap[h.id] || 0;
+/* Compatibilidad con la versión anterior: el desglose de una cuenta concreta. */
+function desgloseCuenta(hid) {
+  const h = holdingPorId(hid);
+  const desde = String((h && h.fechaBase) || '1970-01-01');
+  const vinculados = gastosVinculadosCompartidos();
+  let gastos = 0, bizums = 0, compartidos = 0, ingresos = 0, devoluciones = 0;
+  let inversiones = 0, retiradas = 0, traspasosSalida = 0, traspasosEntrada = 0, pagosDeuda = 0;
+  const auto = ingresosAutomaticosCuenta(h);
+
+  for (const g of state.gastos || []) {
+    if ((g.cuentaId || 'h-ibercaja') !== hid) continue;
+    if (!posteriorA(g.fecha, g.creado, h) || vinculados.has(g.id)) continue;
+    gastos += +g.monto || 0;
+  }
+  for (const ev of state.compartidosEventos || []) {
+    if ((ev.cuentaId || 'h-ibercaja') !== hid) continue;
+    if (!posteriorA(ev.fecha, ev.creado, h)) continue;
+    if (ev.pagador === 'yo') compartidos += +ev.importe || 0;
+  }
+  for (const b of state.bizums || []) {
+    if ((b.cuentaId || 'h-ibercaja') !== hid) continue;
+    if (!posteriorA(b.fecha, b.creado, h)) continue;
+    bizums += +b.importe || 0;
+  }
+  for (const m of state.movimientos || []) {
+    const fecha = String(m.fecha || '');
+    if (!posteriorA(fecha, m.creado, h)) continue;
+    const importe = +m.importe || 0;
+    if (m.cuentaId === hid) {
+      if (m.tipo === 'ingreso' || m.tipo === 'dividendo') ingresos += importe;
+      else if (m.tipo === 'devolucion') devoluciones += importe;
+      else if (m.tipo === 'gasto') gastos += importe;
+      else if (m.tipo === 'inversion') inversiones += importe;
+      else if (m.tipo === 'retirada') retiradas += importe;
+      else if (m.tipo === 'traspaso') traspasosSalida += importe;
+      else if (m.tipo === 'pagoDeuda') pagosDeuda += importe;
     }
+    if (m.cuentaDestinoId === hid && m.tipo === 'traspaso') traspasosEntrada += importe;
   }
-  return Math.round(total * 100) / 100;
-}
-
-function ingresosAutomaticosIbercaja(cfg) {
-  const ingreso = +state.ajustes.ingreso || 0;
-  const paga = pagasConfig();
-  const pagaMeses = new Set(mesesDePagas());
-  const base = new Date(cfg.fechaBase);
-  if (!isFinite(base.getTime())) return { nominas: 0, pagas: 0 };
-  const hoy = new Date();
-  const dia = Math.min(31, Math.max(1, +cfg.diaCobro || 1));
-  let y = base.getFullYear(), m = base.getMonth(), nominas = 0, pagas = 0;
-  while (y < hoy.getFullYear() || (y === hoy.getFullYear() && m <= hoy.getMonth())) {
-    const ultimoDia = new Date(y, m + 1, 0).getDate();
-    const pago = new Date(y, m, Math.min(dia, ultimoDia));
-    if (pago > base && pago <= hoy) {
-      nominas += ingreso;
-      if (paga.activo && pagaMeses.has(m + 1)) pagas += +paga.importe || 0;
-    }
-    m += 1;
-    if (m === 12) { m = 0; y += 1; }
-  }
-  return { nominas, pagas };
-}
-
-function cuentaIbercajaConfig() {
-  const actual = state.ajustes.cuentaIbercaja;
-  if (actual && isFinite(+actual.saldoBase)) {
-    let cambio = false;
-    if (!actual.fechaBase || !isFinite(new Date(actual.fechaBase).getTime())) { actual.fechaBase = new Date().toISOString(); cambio = true; }
-    if (!isFinite(+actual.aportesBase)) { actual.aportesBase = totalAportesInversion(); cambio = true; }
-    const dia = Math.min(31, Math.max(1, +actual.diaCobro || 1));
-    if (+actual.diaCobro !== dia) { actual.diaCobro = dia; cambio = true; }
-    if (cambio) { state.ajustes.mod = Date.now(); guardarEstado(state, true); }
-    return actual;
-  }
-  const h = holdingIbercaja();
-  const base = h ? statsHolding(h.id).valorActual : 0;
-  state.ajustes.cuentaIbercaja = {
-    saldoBase: Math.round(base * 100) / 100,
-    fechaBase: new Date().toISOString(),
-    aportesBase: totalAportesInversion(),
-    diaCobro: Math.min(31, Math.max(1, +state.ajustes.diaCobro || 1)),
+  const r = (n) => Math.round(n * 100) / 100;
+  return {
+    h,
+    base: +((h && h.saldoBase) || 0),
+    gastos: r(gastos),
+    bizums: r(bizums),
+    compartidos: r(compartidos),
+    nominas: r(auto.nominas),
+    pagas: r(auto.pagas),
+    ingresos: r(ingresos),
+    devoluciones: r(devoluciones),
+    inversiones: r(inversiones),
+    retiradas: r(retiradas),
+    traspasosSalida: r(traspasosSalida),
+    traspasosEntrada: r(traspasosEntrada),
+    traspasos: r(traspasosSalida - traspasosEntrada + inversiones - retiradas),
+    pagosDeuda: r(pagosDeuda),
+    actual: saldoCuenta(hid),
   };
-  state.ajustes.mod = Date.now();
-  guardarEstado(state, true);
-  return state.ajustes.cuentaIbercaja;
 }
 
 function desgloseIbercaja() {
-  const cfg = cuentaIbercajaConfig();
-  const baseMs = new Date(cfg.fechaBase).getTime() || 0;
-  const gastos = (state.gastos || [])
-    .filter((g) => (+g.creado || 0) > baseMs)
-    .reduce((a, g) => a + (+g.monto || 0), 0);
-  const bizums = (state.bizums || [])
-    .filter((b) => (+b.creado || 0) > baseMs)
-    .reduce((a, b) => a + (+b.importe || 0), 0);
-  const ingresosAuto = ingresosAutomaticosIbercaja(cfg);
-  const nominas = ingresosAuto.nominas;
-  const pagas = ingresosAuto.pagas;
-  const traspasos = Math.max(0, totalAportesInversion() - (+cfg.aportesBase || 0));
-  const actual = (+cfg.saldoBase || 0) + nominas + pagas + bizums - gastos - traspasos;
-  return {
-    cfg,
-    base: +cfg.saldoBase || 0,
-    gastos: Math.round(gastos * 100) / 100,
-    bizums: Math.round(bizums * 100) / 100,
-    nominas: Math.round(nominas * 100) / 100,
-    pagas: Math.round(pagas * 100) / 100,
-    traspasos: Math.round(traspasos * 100) / 100,
-    actual: Math.round(actual * 100) / 100,
-  };
+  const h = holdingIbercaja();
+  return desgloseCuenta(h ? h.id : 'h-ibercaja');
 }
 
 function saldoIbercajaActual() {
   return desgloseIbercaja().actual;
 }
 
-function ajusteIbercaja() {
-  const h = holdingIbercaja();
-  if (!h) return 0;
-  return Math.round((saldoIbercajaActual() - statsHolding(h.id).valorActual) * 100) / 100;
-}
+function ajusteIbercaja() { return 0; }
 
-/* Saldos actuales agrupados por entidad y por función */
+/* Patrimonio neto = activos + derechos de cobro − deudas − obligaciones. */
 function saldosActuales() {
-  const val = (hid) => statsHolding(hid).valorActual;
-  const sumCubos = (ids) => state.holdings.filter((h) => ids.includes(h.cubo)).reduce((a, h) => a + val(h.id), 0);
-  const diaadia = Math.round((sumCubos(['diaadia']) + ajusteIbercaja()) * 100) / 100;
+  const sumCubos = (ids) => holdingsActivos().filter((h) => ids.includes(h.cubo) && esCuentaEfectivo(h)).reduce((a, h) => a + valorHolding(h.id), 0);
+  const diaadia = Math.round(sumCubos(['diaadia']) * 100) / 100;
   const colchon = sumCubos(['emergencia']);
   const vivienda = sumCubos(['vivienda']);
   const viajes = sumCubos(['viajes']);
-  const inversion = sumCubos(['jubilacion']);
   const ahorro = vivienda + viajes;
-  const efectivoTR = colchon + ahorro;
+  const inversion = holdingsActivos().filter(esInversion).reduce((a, h) => a + valorHolding(h.id), 0);
+  const inmuebles = holdingsActivos().filter((h) => h.tipo === 'inmueble').reduce((a, h) => a + valorHolding(h.id), 0);
+  const efectivo = holdingsActivos().filter((h) => esCuentaEfectivo(h) && h.cubo !== 'diaadia').reduce((a, h) => a + valorHolding(h.id), 0);
   const conocidos = ['diaadia', 'emergencia', 'vivienda', 'viajes', 'jubilacion'];
-  const otros = state.holdings.filter((h) => !conocidos.includes(h.cubo)).reduce((a, h) => a + val(h.id), 0);
-  const tr = efectivoTR + inversion + otros;
-  return { diaadia, colchon, vivienda, viajes, ahorro, inversion, efectivoTR, otros, tr, total: Math.round((diaadia + tr) * 100) / 100 };
+  const otros = holdingsActivos()
+    .filter((h) => !conocidos.includes(h.cubo) && !esCuentaEfectivo(h) && !esInversion(h) && h.tipo !== 'inmueble')
+    .reduce((a, h) => a + valorHolding(h.id), 0);
+  const comp = balancesCompartidos();
+  const deudas = (state.deudas || []).reduce((a, d) => a + (+d.saldo || 0), 0);
+  const activos = diaadia + efectivo + inversion + inmuebles + otros;
+  const total = activos + comp.debido - comp.debo - deudas;
+  return {
+    diaadia,
+    colchon,
+    vivienda,
+    viajes,
+    ahorro,
+    inversion,
+    inmuebles,
+    efectivo,
+    efectivoTR: efectivo,
+    otros,
+    porCobrar: comp.debido,
+    porPagar: comp.debo,
+    deudas: Math.round(deudas * 100) / 100,
+    activos: Math.round(activos * 100) / 100,
+    tr: efectivo + inversion + inmuebles + otros,
+    total: Math.round(total * 100) / 100,
+  };
+}
+
+function patrimonioNeto() { return saldosActuales().total; }
+
+function totalDeudas() {
+  return Math.round((state.deudas || []).reduce((a, d) => a + (+d.saldo || 0), 0) * 100) / 100;
+}
+
+function deudaPorId(id) { return (state.deudas || []).find((d) => d.id === id); }
+
+function ingresosDelMes(mk) {
+  const auto = holdingsActivos().some((h) => h.autoNomina);
+  const nomina = auto ? (+state.ajustes.ingreso || 0) : 0;
+  const paga = 0;
+  const otros = (state.movimientos || [])
+    .filter((m) => (m.tipo === 'ingreso' || m.tipo === 'dividendo') && String(m.fecha).startsWith(mk))
+    .reduce((a, m) => a + (+m.importe || 0), 0);
+  const devoluciones = (state.movimientos || [])
+    .filter((m) => m.tipo === 'devolucion' && String(m.fecha).startsWith(mk))
+    .reduce((a, m) => a + (+m.importe || 0), 0);
+  return { nomina, paga, otros, devoluciones, total: nomina + paga + otros + devoluciones };
+}
+
+function flujoMes(mk) {
+  const ingresos = ingresosDelMes(mk);
+  const gastos = totalGastado(mk);
+  const inversiones = (state.movimientos || [])
+    .filter((m) => m.tipo === 'inversion' && String(m.fecha).startsWith(mk))
+    .reduce((a, m) => a + (+m.importe || 0), 0);
+  const retiradas = (state.movimientos || [])
+    .filter((m) => m.tipo === 'retirada' && String(m.fecha).startsWith(mk))
+    .reduce((a, m) => a + (+m.importe || 0), 0);
+  const aportesSnapMes = aportesSnap(mk) || 0;
+  const aportes = aportesSnapMes > 0 ? aportesSnapMes : (inversiones - retiradas);
+  const pagosDeuda = (state.movimientos || [])
+    .filter((m) => m.tipo === 'pagoDeuda' && String(m.fecha).startsWith(mk))
+    .reduce((a, m) => a + (+m.importe || 0), 0);
+  const ahorro = ingresos.total - gastos;
+  return {
+    ingresos,
+    gastos,
+    aportes,
+    pagosDeuda,
+    ahorro,
+    tasaAhorro: ingresos.total > 0 ? ahorro / ingresos.total : null,
+    flujo: ingresos.total - gastos - aportes - pagosDeuda,
+  };
+}
+
+function xirrHolding(hid) {
+  const h = holdingPorId(hid);
+  if (!h || !esInversion(h)) return null;
+  const flujos = [];
+  for (const m of state.movimientos || []) {
+    if (m.holdingId !== hid) continue;
+    if (m.tipo === 'inversion') flujos.push({ fecha: m.fecha, importe: -(+m.importe || 0) });
+    if (m.tipo === 'retirada') flujos.push({ fecha: m.fecha, importe: +m.importe || 0 });
+    if (m.tipo === 'dividendo') flujos.push({ fecha: m.fecha, importe: +m.importe || 0 });
+  }
+  const st = statsHoldingSnapshot(hid);
+  if (!flujos.length && st.serie.length) {
+    flujos.push({ fecha: `${st.serie[0].month}-01`, importe: -(+st.serie[0].valor || 0) });
+    for (const s of st.serie.slice(1)) {
+      if (+s.aporte) flujos.push({ fecha: `${s.month}-01`, importe: -(+s.aporte || 0) });
+    }
+  }
+  if (!flujos.length) return null;
+  const actual = valorHolding(hid);
+  flujos.push({ fecha: hoyISO(), importe: actual });
+  return xirr(flujos);
+}
+
+function movimientosDelMes(mk) {
+  const gastos = gastosDelMes(mk).map((g) => ({
+    id: g.id, fecha: g.fecha, tipo: 'gasto', importe: g.monto, catId: g.catId,
+    cuentaId: g.cuentaId, nota: g.nota, creado: g.creado, origen: 'gasto',
+  }));
+  const movs = (state.movimientos || [])
+    .filter((m) => String(m.fecha).startsWith(mk))
+    .map((m) => ({ ...m, origen: 'movimiento' }));
+  return [...gastos, ...movs].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)) || (+b.creado || 0) - (+a.creado || 0));
+}
+
+function etiquetaTipoMovimiento(tipo) {
+  return ({
+    ingreso: 'Ingreso',
+    gasto: 'Gasto',
+    traspaso: 'Traspaso',
+    inversion: 'Inversión',
+    retirada: 'Retirada',
+    pagoDeuda: 'Pago de deuda',
+    devolucion: 'Devolución',
+    dividendo: 'Dividendo / cupón',
+  })[tipo] || tipo;
 }
 
 /* ============ Objetivo: casa ============ */
-function addMonths(mk, n) {
-  let [y, m] = mk.split('-').map(Number);
-  m += n;
-  while (m > 12) { m -= 12; y++; }
-  while (m < 1) { m += 12; y--; }
-  return `${y}-${String(m).padStart(2, '0')}`;
-}
-
-function monthsBetween(mkA, mkB) {
-  const [y1, m1] = mkA.split('-').map(Number);
-  const [y2, m2] = mkB.split('-').map(Number);
-  return (y2 - y1) * 12 + (m2 - m1);
-}
-
 /* ============ Pagas extra ============ */
 function pagasConfig() {
   return state.ajustes.pagas || { activo: false };
@@ -648,6 +1012,21 @@ function mesesDePagas() {
 
 function esMesDePaga(mk) {
   return mesesDePagas().includes(+mk.split('-')[1]);
+}
+
+function pagasPendientes() {
+  const p = pagasConfig();
+  if (!p.activo) return [];
+  const out = [];
+  let mk = currentMonthKey();
+  for (let i = 0; i < 12; i++) {
+    if (esMesDePaga(mk)) {
+      const sn = snapPorMes(mk);
+      if (!sn || !sn.pagaAplicada) out.push(mk);
+    }
+    mk = prevMonthKey(mk);
+  }
+  return out;
 }
 
 /* Reparto de una paga por cubos → posiciones concretas */
@@ -670,12 +1049,51 @@ function repartoPaga(monto) {
   const out = [];
   for (const [cubo, pctCubo] of Object.entries(pct)) {
     if (pctCubo <= 0) continue;
-    const hs = state.holdings.filter((h) => h.cubo === cubo);
+    const hs = holdingsActivos().filter((h) => h.cubo === cubo);
     if (!hs.length) continue;
     const importeCubo = (monto * pctCubo) / 100;
     for (const h of hs) out.push({ hid: h.id, monto: Math.round((importeCubo / hs.length) * 100) / 100, cubo, pct: pctCubo });
   }
   return out;
+}
+
+/* Reconstruye los movimientos de caja/inversión de un snapshot a partir de sus aportes.
+   Así el registro mensual y la paga extra mueven el dinero de verdad y no solo el gráfico. */
+function sincronizarAportesSnapshot(mk) {
+  const snap = snapPorMes(mk);
+  if (!snap) return;
+  const origen = holdingIbercaja() ? holdingIbercaja().id : (holdingsActivos().find(esCuentaEfectivo) || {}).id;
+  if (!origen) return;
+  state.movimientos = (state.movimientos || []).filter((m) => m.origenSnapshot !== mk);
+  for (const h of state.holdings) {
+    if (h.snapshotUnidades && h.snapshotUnidades[mk]) {
+      h.unidades = Math.max(0, (+h.unidades || 0) - (+h.snapshotUnidades[mk] || 0));
+      delete h.snapshotUnidades[mk];
+    }
+  }
+  const fecha = mk === currentMonthKey() ? hoyISO() : `${mk}-02`;
+  for (const h of holdingsActivos()) {
+    const a = +((snap.aportes || {})[h.id]) || 0;
+    if (a <= 0 || h.id === origen) continue;
+    if (esCuentaEfectivo(h)) {
+      state.movimientos.push(stamp({ id: uid(), tipo: 'traspaso', importe: a, fecha, cuentaId: origen, cuentaDestinoId: h.id, nota: `Aportación ${fmtMes(mk)}`, origenSnapshot: mk, creado: Date.now() }));
+    } else {
+      if (+h.precio > 0) {
+        const um = a / +h.precio;
+        h.unidades = Math.round(((+h.unidades || 0) + um) * 1000000) / 1000000;
+        h.snapshotUnidades = h.snapshotUnidades || {};
+        h.snapshotUnidades[mk] = um;
+        stamp(h);
+      }
+      state.movimientos.push(stamp({ id: uid(), tipo: 'inversion', importe: a, fecha, cuentaId: origen, holdingId: h.id, nota: `Aportación ${fmtMes(mk)}`, origenSnapshot: mk, creado: Date.now() }));
+    }
+  }
+  if (snap.pagaAplicada) {
+    const importePaga = +snap.pagaImporte || +pagasConfig().importe || 0;
+    if (importePaga > 0) {
+      state.movimientos.push(stamp({ id: uid(), tipo: 'ingreso', importe: importePaga, fecha, cuentaId: origen, nota: `Paga extra ${fmtMes(mk)}`, origenSnapshot: mk, pagaIngreso: true, creado: Date.now() }));
+    }
+  }
 }
 
 function aplicarPaga(mk) {
@@ -686,11 +1104,12 @@ function aplicarPaga(mk) {
   const snap = snapPorMes(mk);
   if (!snap) return modalRegistrar(mk);
   if (snap.pagaAplicada) return toast('La paga ya está aplicada a ese mes');
+  snap.pagaImporte = importe;
   for (const r of repartoPaga(importe)) {
-    snap.valores[r.hid] = Math.round(((+snap.valores[r.hid] || 0) + r.monto) * 100) / 100;
     snap.aportes[r.hid] = Math.round(((+snap.aportes[r.hid] || 0) + r.monto) * 100) / 100;
   }
   snap.pagaAplicada = true;
+  sincronizarAportesSnapshot(mk);
   stamp(snap);
   guardarEstado();
   toast(`Paga extra aplicada a ${fmtMes(mk)}`);
@@ -701,12 +1120,16 @@ function extraAnualVivienda() {
   const p = pagasConfig();
   if (!p.activo) return 0;
   const numero = Math.min(Math.max(+p.numero || 2, 1), 2);
-  return numero * (+p.importe || 0) * ((+((p.reparto || {}).vivienda) || 0) / 100);
+  const r = p.reparto || {};
+  let vivienda = Math.max(0, +r.vivienda || 0);
+  const suma = vivienda + Math.max(0, +r.etf || 0) + Math.max(0, +r.viajes || 0);
+  if (suma > 100) vivienda = vivienda * 100 / suma;
+  return numero * (+p.importe || 0) * (vivienda / 100);
 }
 
 function fondoViviendaActual() {
-  return state.holdings
-    .filter((h) => h.cubo === 'vivienda')
+  return holdingsActivos()
+    .filter((h) => h.cubo === 'vivienda' && esCuentaEfectivo(h))
     .reduce((a, h) => a + statsHolding(h.id).valorActual, 0);
 }
 
@@ -717,7 +1140,7 @@ function datosVivienda() {
   const pctGastos = +o.pctGastos || 0;
   const objetivo = precio * (pctEntrada + pctGastos) / 100;
   const fondo = fondoViviendaActual();
-  const planMes = state.holdings.filter((h) => h.cubo === 'vivienda').reduce((a, h) => a + (+h.plan || 0), 0);
+  const planMes = holdingsActivos().filter((h) => h.cubo === 'vivienda').reduce((a, h) => a + (+h.plan || 0), 0);
   const margen = +o.margen || 0;
   const extraAnual = extraAnualVivienda();
   const aporteMes = planMes + margen + extraAnual / 12;
@@ -819,6 +1242,7 @@ function render() {
   if (ui.tab === 'patrimonio') return vistaPatrimonio(view);
   if (ui.tab === 'analisis') return vistaAnalisis(view);
   if (ui.tab === 'objetivos') return vistaObjetivos(view);
+  if (ui.tab === 'plan') return vistaPlan(view);
   if (ui.tab === 'compartidos') return vistaCompartidos(view);
   if (ui.tab === 'ajustes') return vistaAjustes(view);
   return vistaInicio(view);
@@ -864,7 +1288,7 @@ function fechaHoyLarga() {
 }
 
 function aportePlanMensual() {
-  return state.holdings.reduce((a, h) => a + (+h.plan || 0), 0);
+  return holdingsActivos().reduce((a, h) => a + (+h.plan || 0), 0);
 }
 
 function aportesSnap(mk) {
@@ -939,6 +1363,9 @@ function vistaInicio(view) {
   const planMes = aportePlanMensual();
   const aportesRegistrados = aportesMes != null && aportesMes > 0;
   const ahorroMes = aportesRegistrados ? aportesMes : planMes;
+  const flujo = flujoMes(mk);
+  const planRes = resumenPlan();
+  const recPend = recurrentesPendientes();
   const comp = balancesCompartidos();
   const resumenComp = (comp.debido > 0.004 || comp.debo > 0.004)
     ? `${comp.debido > 0.004 ? `Te deben ${eur(comp.debido)}` : ''}${comp.debido > 0.004 && comp.debo > 0.004 ? ' · ' : ''}${comp.debo > 0.004 ? `Debes ${eur(comp.debo)}` : ''}`
@@ -954,15 +1381,19 @@ function vistaInicio(view) {
   const pctGastosTxt = presupuesto > 0 ? `${Math.round(pctG * 100)} %` : '—';
   const pctCasaTxt = (pctCasa * 100).toFixed(1).replace('.', ',');
   const snHoy = snapPorMes(mk);
-  const pagaPendiente = pagasConfig().activo && esMesDePaga(mk) && (!snHoy || !snHoy.pagaAplicada);
+  const pagasPend = pagasPendientes();
+  const pagaPendienteMk = pagasPend[0] || null;
+  const pagaPendiente = !!pagaPendienteMk;
   const excedidas = state.categorias.filter((c) => {
     const gastado = gastos.filter((g) => g.catId === c.id).reduce((a, g) => a + g.monto, 0);
     return c.presupuesto > 0 && gastado > c.presupuesto;
   });
   const avisos = [];
   if (!snHoy) avisos.push({ tipo: 'info', icono: icono('calendario', 15), html: `Aún no has registrado los valores de <strong>${fmtMes(mk)}</strong>.` });
-  if (pagaPendiente) avisos.push({ tipo: 'info', icono: icono('calendario', 15), html: `Tienes una <strong>paga extra</strong> de ${eur(+pagasConfig().importe || 0)} pendiente de aplicar.` });
+  if (pagaPendiente) avisos.push({ tipo: 'info', icono: icono('calendario', 15), html: `Tienes <strong>${pagasPend.length}</strong> paga${pagasPend.length === 1 ? '' : 's'} extra pendiente${pagasPend.length === 1 ? '' : 's'} de aplicar (${fmtMes(pagaPendienteMk)}).` });
   if (excedidas.length) avisos.push({ tipo: 'alerta', icono: icono('alerta', 15), html: `Has superado el presupuesto en <strong>${excedidas.length} ${excedidas.length === 1 ? 'categoría' : 'categorías'}</strong> este mes.` });
+  if (recPend > 0) avisos.push({ tipo: 'info', icono: icono('calendario', 15), html: `Tienes <strong>${recPend}</strong> movimientos recurrentes pendientes de aplicar.` });
+  if (planRes.mesesColchon != null && planRes.mesesColchon < planRes.p.colchonMeses) avisos.push({ tipo: 'alerta', icono: icono('escudo', 15), html: `Tu colchón cubre <strong>${planRes.mesesColchon.toFixed(1).replace('.', ',')} meses</strong>; el objetivo es ${planRes.p.colchonMeses}.` });
   const hayAvisos = avisos.length > 0;
 
   const recientesHtml = recientes.length ? recientes.map((g) => {
@@ -990,7 +1421,7 @@ function vistaInicio(view) {
     ${pagaPendiente ? `
     <div class="banner">
       <span class="banner-ico">${icono('calendario', 19)}</span>
-      <div class="banner-text"><strong>Paga extra de ${fmtMes(mk).toLowerCase()}</strong>${eur(+pagasConfig().importe || 0)} pendiente de aplicar a tus aportaciones.</div>
+      <div class="banner-text"><strong>Paga extra de ${fmtMes(pagaPendienteMk).toLowerCase()}</strong>${eur(+pagasConfig().importe || 0)} pendiente de aplicar a tus aportaciones.</div>
       <button class="btn small" id="inicio-paga" type="button">Aplicar paga</button>
     </div>` : ''}
 
@@ -999,14 +1430,14 @@ function vistaInicio(view) {
         <section class="card networth-card">
           <div class="networth-top">
             <div class="networth-copy">
-              <span class="networth-label">Patrimonio total</span>
+              <span class="networth-label">Patrimonio neto</span>
               <div class="hero-value networth-value">${eur(saldos.total)}</div>
               <div class="networth-trend ${variacion == null ? 'neutral' : variacion < 0 ? 'negative' : 'positive'}">
                 ${variacion != null ? `<span class="trend-mark" aria-hidden="true">${variacion < 0 ? '▼' : '▲'}</span>` : ''}
                 <strong>${fmtPct(variacion, { decimales: 1 })}</strong>
                 <span>${variacionEsMes ? 'este mes' : variacion != null ? 'desde el inicio' : 'sin datos'}</span>
               </div>
-              <span class="networth-aportado">Aportado ${eur(stats.aportado)}</span>
+              <span class="networth-aportado">Activos ${eur(saldos.activos)} · deudas ${eur(saldos.deudas)} · aportado ${eur(stats.aportado)}</span>
             </div>
             ${saldos.total > 0 ? `<div class="networth-spark">${sparkDatos(serie.length > 1 ? serie.map((s) => s.post) : [saldos.total, saldos.total], { w: 150, h: 46, suave: true, area: true })}</div>` : ''}
           </div>
@@ -1032,6 +1463,14 @@ function vistaInicio(view) {
               <div class="summary-sub"><strong>${eur(ahorroMes)}</strong> <span>${aportesRegistrados ? 'este mes' : 'plan mensual'}</span></div>
             </div>
             <span class="summary-right summary-arrow">${icono('chevron', 17)}</span>
+          </div>
+          <div class="summary-row" data-nav="plan" role="button" tabindex="0" aria-label="Ver plan financiero">
+            <span class="summary-ico gold">${icono('tendencia', 20)}</span>
+            <div class="summary-main">
+              <div class="summary-title">Tasa de ahorro</div>
+              <div class="summary-sub"><strong>${fmtPct(flujo.tasaAhorro, { conSigno: false, decimales: 1 })}</strong> <span>· colchón ${planRes.mesesColchon == null ? '—' : planRes.mesesColchon.toFixed(1).replace('.', ',') + ' meses'}</span></div>
+            </div>
+            <span class="summary-right">${icono('chevron', 17)}</span>
           </div>
           <div class="summary-row summary-goal-row" data-nav="objetivos" role="button" tabindex="0" aria-label="Ver objetivos">
             <span class="summary-ico gold">${icono('casa', 20)}</span>
@@ -1116,7 +1555,7 @@ function vistaInicio(view) {
   const reg = $('#inicio-registrar');
   if (reg) reg.onclick = () => modalRegistrar(currentMonthKey());
   const paga = $('#inicio-paga');
-  if (paga) paga.onclick = () => aplicarPaga(mk);
+  if (paga) paga.onclick = () => aplicarPaga(pagaPendienteMk || mk);
   const bell = $('#inicio-avisos');
   if (bell) bell.onclick = () => modalAvisos(avisos);
 }
@@ -1145,7 +1584,7 @@ function vistaGastos(view) {
   view.classList.add('view-gastos');
   const gastos = gastosDelMes(ui.month);
   const total = totalGastado(ui.month);
-  const presupuesto = presupuestoTotal();
+  const presupuesto = presupuestoTotalMes(ui.month);
   const pctGlobal = presupuesto > 0 ? total / presupuesto : null;
   const quedan = presupuesto - total;
   const comp = balancesCompartidos();
@@ -1154,8 +1593,11 @@ function vistaGastos(view) {
     : 'Controla cenas, regalos y bizums: quién te debe y cuánto.';
 
   const catsData = state.categorias
-    .map((c) => ({ ...c, gastado: gastos.filter((g) => g.catId === c.id).reduce((a, g) => a + g.monto, 0) }))
+    .map((c) => ({ ...c, presupuesto: presupuestoCategoria(c.id, ui.month), gastado: gastos.filter((g) => g.catId === c.id).reduce((a, g) => a + g.monto, 0) }))
     .sort((a, b) => b.gastado - a.gastado);
+  const movsMes = (state.movimientos || [])
+    .filter((m) => String(m.fecha).startsWith(ui.month))
+    .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)) || (+b.creado || 0) - (+a.creado || 0));
 
   const pctTxt = pctGlobal == null ? '—' : `${Math.round(pctGlobal * 100)} %`;
   const anillo = anilloProgreso(pctGlobal, { size: 82, grosor: 8, label: pctTxt });
@@ -1198,10 +1640,29 @@ function vistaGastos(view) {
         }).join('')}
       </div>`).join('');
 
+  const listaMovs = movsMes.length ? movsMes.map((m) => {
+    const cat = catPorId(m.catId);
+    const cuenta = holdingPorId(m.cuentaId);
+    const positivo = ['ingreso', 'retirada', 'devolucion'].includes(m.tipo);
+    const color = positivo ? 'var(--accent)' : 'var(--rose)';
+    return `<div class="exp-item" data-edit-mov="${m.id}" role="button" tabindex="0" aria-label="Editar movimiento">
+      <span class="dot" style="background:${color}"></span>
+      <div class="exp-main">
+        <div class="exp-note">${escapeHtml(m.nota || etiquetaTipoMovimiento(m.tipo))}</div>
+        <div class="exp-cat">${escapeHtml(etiquetaTipoMovimiento(m.tipo))}${cat ? ' · ' + escapeHtml(cat.nombre) : ''}${cuenta ? ' · ' + escapeHtml(cuenta.nombre) : ''} · ${fmtDia(m.fecha)}</div>
+      </div>
+      <span class="exp-amount ${positivo ? 'pct-good' : ''}">${positivo ? '+' : '−'}${eur(m.importe)}</span>
+    </div>`;
+  }).join('') : '<div class="empty" style="padding:16px"><span class="big">🔁</span>Sin ingresos, traspasos ni inversiones este mes.</div>';
+
   view.innerHTML = `
     <header class="page-head gastos-head">
-      <h1>Gastos</h1>
-      ${monthNavHTML()}
+      <div><span class="eyebrow">Control del mes</span><h1>Gastos</h1></div>
+      <div class="page-head-actions">
+        <button class="btn secondary small" id="btn-add-mov" type="button">${icono('mas', 15)} Movimiento</button>
+        <button class="btn secondary small" id="btn-import-csv" type="button">${icono('descargar', 15)} Importar CSV</button>
+        ${monthNavHTML()}
+      </div>
     </header>
 
     <div class="content-grid gastos-grid">
@@ -1231,9 +1692,17 @@ function vistaGastos(view) {
       <div class="stack">
         <section class="card">
           <div class="card-head">
-            <div><h2>Detalle del mes</h2><p>${gastos.length} ${gastos.length === 1 ? 'movimiento' : 'movimientos'} en ${fmtMes(ui.month).toLowerCase()}</p></div>
+            <div><h2>Detalle del mes</h2><p>${gastos.length} ${gastos.length === 1 ? 'gasto' : 'gastos'} en ${fmtMes(ui.month).toLowerCase()}</p></div>
+            <button class="card-link" id="btn-export-csv" type="button">${icono('descargar', 14)} CSV</button>
           </div>
           ${lista}
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <div><h2>Otros movimientos</h2><p>Ingresos, traspasos, inversiones, retiradas y pagos de deuda</p></div>
+          </div>
+          ${listaMovs}
         </section>
 
         <section class="card">
@@ -1250,10 +1719,19 @@ function vistaGastos(view) {
   cablearNavegacion(view);
   const add = $('#btn-add-gasto');
   if (add) add.onclick = () => modalGasto(null);
+  const addMov = $('#btn-add-mov');
+  if (addMov) addMov.onclick = () => modalMovimiento();
+  const importCsv = $('#btn-import-csv');
+  if (importCsv) importCsv.onclick = () => modalImportarCSV();
+  const exportCsv = $('#btn-export-csv');
+  if (exportCsv) exportCsv.onclick = () => descargarCSVMovimientos();
   const btnComp = $('#btn-comp');
   if (btnComp) btnComp.onclick = () => irTab('compartidos');
   view.querySelectorAll('[data-edit]').forEach((el) => {
     el.onclick = () => modalGasto(el.dataset.edit);
+  });
+  view.querySelectorAll('[data-edit-mov]').forEach((el) => {
+    el.onclick = () => modalMovimiento(el.dataset.editMov);
   });
 }
 
@@ -1278,6 +1756,10 @@ function modalGasto(idGasto = null) {
           <div class="chips" id="g-cats">
             ${state.categorias.map((c) => `<button class="chip ${c.id === catSel ? 'selected' : ''}" type="button" data-cat="${c.id}">${escapeHtml(c.nombre)}</button>`).join('')}
           </div></div>
+        <div class="field"><label for="g-cuenta">Cuenta / método de pago</label>
+          <select id="g-cuenta">
+            ${holdingsActivos().filter(esCuentaEfectivo).map((h) => `<option value="${h.id}" ${((g && g.cuentaId) || 'h-ibercaja') === h.id ? 'selected' : ''}>${escapeHtml(h.nombre)} · ${escapeHtml(h.entidad || '')}</option>`).join('')}
+          </select></div>
         <div class="field"><label for="g-nota">Nota (opcional)</label>
           <input id="g-nota" type="text" placeholder="Ej.: cena con el grupo 1" value="${escapeHtml(g ? g.nota : '')}" /></div>
       </div>
@@ -1302,19 +1784,20 @@ function modalGasto(idGasto = null) {
     const monto = parseAmount($('#g-monto', overlay).value);
     const fecha = $('#g-fecha', overlay).value;
     const nota = $('#g-nota', overlay).value.trim();
+    const cuentaId = $('#g-cuenta', overlay).value || 'h-ibercaja';
     if (monto == null || monto <= 0) return toast('Introduce un importe válido', 'error');
     if (monto > 1e9) return toast('El importe es demasiado grande', 'error');
     if (!fecha) return toast('Introduce una fecha', 'error');
     if (idGasto) {
       const enEstado = state.gastos.find((x) => x.id === idGasto);
       if (enEstado) {
-        Object.assign(enEstado, { monto, fecha, catId: catSel, nota });
+        Object.assign(enEstado, { monto, fecha, catId: catSel, nota, cuentaId });
         stamp(enEstado);
       } else {
-        state.gastos.push(stamp({ id: idGasto, monto, fecha, catId: catSel, nota, creado: Date.now() }));
+        state.gastos.push(stamp({ id: idGasto, monto, fecha, catId: catSel, nota, cuentaId, creado: Date.now() }));
       }
     } else {
-      state.gastos.push(stamp({ id: uid(), monto, fecha, catId: catSel, nota, creado: Date.now() }));
+      state.gastos.push(stamp({ id: uid(), monto, fecha, catId: catSel, nota, cuentaId, creado: Date.now() }));
     }
     guardarEstado();
     cerrar();
@@ -1322,13 +1805,14 @@ function modalGasto(idGasto = null) {
     render();
   };
   if (idGasto) $('#g-borrar', overlay).onclick = () => {
+    if ((state.compartidosEventos || []).some((ev) => ev.gastoId === idGasto)) {
+      return toast('Este gasto forma parte de un gasto compartido; bórralo desde Compartidos', 'error');
+    }
     tumba('gastos', idGasto);
     state.gastos = state.gastos.filter((x) => x.id !== idGasto);
     guardarEstado(); cerrar(); toast('Gasto borrado'); render();
   };
 }
-
-function hoyISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 
 /* Fuerza la actualización de la PWA sin borrar datos (localStorage intacto) */
 async function buscarActualizacion() {
@@ -1373,10 +1857,10 @@ function vistaObjetivos(view) {
 
   const extraGoals = (state.objetivos || []).map((g) => {
     const cubo = cuboPorId(g.cuboId);
-    const actual = state.holdings
+    const actual = holdingsActivos()
       .filter((h) => h.cubo === g.cuboId)
       .reduce((a, h) => a + statsHolding(h.id).valorActual, 0);
-    const plan = state.holdings
+    const plan = holdingsActivos()
       .filter((h) => h.cubo === g.cuboId)
       .reduce((a, h) => a + (+h.plan || 0), 0);
     const monto = +g.monto || 0;
@@ -1384,7 +1868,10 @@ function vistaObjetivos(view) {
     const pct = monto > 0 ? Math.min(actual / monto, 1) : 0;
     const meses = faltan > 0 && plan > 0 ? Math.ceil(faltan / plan) : null;
     const llegada = meses ? addMonths(currentMonthKey(), meses) : null;
-    return { ...g, cubo, actual, plan, monto, faltan, pct, meses, llegada, color: colorCubo(g.cuboId) };
+    const mesesHastaFecha = g.fecha ? Math.max(monthsBetween(currentMonthKey(), g.fecha), 0) : null;
+    const aporteNecesario = mesesHastaFecha && faltan > 0 ? faltan / mesesHastaFecha : null;
+    const enPlazo = g.fecha && llegada ? String(llegada) <= String(g.fecha) : null;
+    return { ...g, cubo, actual, plan, monto, faltan, pct, meses, llegada, mesesHastaFecha, aporteNecesario, enPlazo, color: colorCubo(g.cuboId) };
   });
 
   // Proyección del fondo vivienda (aportaciones sin intereses)
@@ -1411,8 +1898,8 @@ function vistaObjetivos(view) {
   } else if (mesesPara != null && mesesPara <= 24) {
     tips.push('Faltan menos de 24 meses para la fecha objetivo: según el informe, el efectivo de la entrada debería estar ya en seguro, sin bolsa.');
   }
-  const efectivoTR = state.holdings
-    .filter((h) => h.cubo === 'emergencia' || h.cubo === 'vivienda' || h.cubo === 'viajes')
+  const efectivoTR = holdingsActivos()
+    .filter((h) => (h.entidad || '').toLowerCase() === 'trade republic' && esCuentaEfectivo(h))
     .reduce((a, h) => a + statsHolding(h.id).valorActual, 0);
   if (efectivoTR >= 80000) {
     tips.push(`Regla 9 del informe: tienes ${eur0(efectivoTR)} de efectivo en Trade Republic y la garantía cubre 100.000 € por entidad — repártelo entre entidades para quedar por debajo.`);
@@ -1442,7 +1929,7 @@ function vistaObjetivos(view) {
           <h2>${escapeHtml(g.nombre)}</h2>
           <div class="goal-date">${icono('calendario', 13)} ${g.fecha ? `Fecha objetivo ${fmtMes(g.fecha)}` : 'Sin fecha objetivo'}</div>
         </div>
-        <span class="pill goal-badge">${(g.pct * 100).toFixed(1).replace('.', ',')} %</span>
+        <span class="pill goal-badge ${g.enPlazo === true ? 'good' : g.enPlazo === false ? 'bad' : ''}">${(g.pct * 100).toFixed(1).replace('.', ',')} %</span>
       </div>
       <div class="goal-value-row"><strong>${eur0(g.actual)}</strong><span>de ${eur0(g.monto)}</span></div>
       <div class="progress"><span style="width:${g.pct * 100}%"></span></div>
@@ -1451,6 +1938,7 @@ function vistaObjetivos(view) {
         <div><span>Faltan</span><strong>${eur0(g.faltan)}</strong></div>
         <div><span>Llegada</span><strong>${g.llegada ? fmtMes(g.llegada) : '—'}</strong></div>
       </div>
+      ${g.fecha ? `<div class="goal-stats"><div><span>Necesario para fecha</span><strong>${g.aporteNecesario == null ? '—' : eur0(g.aporteNecesario) + '/mes'}</strong></div><div><span>¿En plazo?</span><strong class="${g.enPlazo === true ? 'pct-good' : g.enPlazo === false ? 'pct-bad' : ''}">${g.enPlazo === true ? 'Sí' : g.enPlazo === false ? 'No' : '—'}</strong></div></div>` : ''}
       <div class="goal-actions">
         <button class="btn secondary small" data-goal-edit="${g.id}" type="button">${icono('editar', 15)} Editar</button>
         <button class="icon-btn danger" data-goal-del="${g.id}" type="button" aria-label="Eliminar objetivo">${icono('basura', 16)}</button>
@@ -1478,7 +1966,7 @@ function vistaObjetivos(view) {
             <h2>Entrada para la vivienda</h2>
             <div class="goal-date">${icono('calendario', 13)} ${v.fechaObj ? `Fecha objetivo ${fmtMes(v.fechaObj)}` : 'Sin fecha objetivo'} · ${eur0(v.precio)} de vivienda</div>
           </div>
-          <span class="pill goal-badge ${completado ? 'good' : ''}">${(pctCasaReal * 100).toFixed(1).replace('.', ',')} %</span>
+          <span class="pill goal-badge ${completado ? 'good' : v.cumple === true ? 'good' : v.cumple === false ? 'bad' : ''}">${(pctCasaReal * 100).toFixed(1).replace('.', ',')} %</span>
         </div>
         <div class="goal-value-row">
           <strong>${completado ? '🎉' : eur0(v.fondo)}</strong>
@@ -1489,6 +1977,10 @@ function vistaObjetivos(view) {
           <div><span>Aportación mensual</span><strong>${eur0(v.aporteMes)}</strong></div>
           <div><span>Faltan</span><strong>${eur0(v.faltan)}</strong></div>
           <div><span>Llegada estimada</span><strong>${v.llegada ? fmtMes(v.llegada) : '—'}</strong></div>
+        </div>
+        <div class="goal-stats">
+          <div><span>¿Llegas a la fecha?</span><strong class="${v.cumple === true ? 'pct-good' : v.cumple === false ? 'pct-bad' : ''}">${v.cumple === true ? 'Sí' : v.cumple === false ? 'No' : '—'}</strong></div>
+          <div><span>Fondo en fecha</span><strong>${v.fondoEnFecha == null ? '—' : eur0(v.fondoEnFecha)}</strong></div>
         </div>
         <div class="goal-actions">
           <button class="btn secondary small" id="ob-casa-editar" type="button">${icono('editar', 15)} Editar objetivo</button>
@@ -1606,14 +2098,20 @@ function modalObjetivoCasa() {
     if (precio == null || precio <= 0) return toast('Introduce un precio válido', 'error');
     if (pctEntrada == null || pctEntrada < 0 || pctEntrada > 100) return toast('El % de entrada no es válido', 'error');
     if (pctGastos == null || pctGastos < 0 || pctGastos > 100) return toast('El % de gastos no es válido', 'error');
+    const fechaObjetivo = $('#oc-fecha', overlay).value || null;
     state.ajustes.objetivoCasa = {
       ...state.ajustes.objetivoCasa,
       precio,
       pctEntrada,
       pctGastos,
       margen: Math.max(margen, 0),
-      fechaObjetivo: $('#oc-fecha', overlay).value || null,
+      fechaObjetivo,
     };
+    state.plan.hipoteca.precio = precio;
+    state.plan.hipoteca.entrada = pctEntrada;
+    state.plan.hipoteca.gastos = pctGastos;
+    state.plan.hipoteca.fecha = fechaObjetivo;
+    state.plan.mod = Date.now();
     state.ajustes.mod = Date.now();
     guardarEstado(); cerrar(); toast('Objetivo actualizado'); render();
   };
@@ -1624,7 +2122,7 @@ function modalObjetivoNuevo(goal = null) {
   const usados = new Set((state.objetivos || []).filter((x) => x.id !== (goal && goal.id)).map((x) => x.cuboId));
   const disponibles = state.cubos.filter((c) => c.id !== 'vivienda' && !usados.has(c.id));
   if (!goal && !disponibles.length) {
-    return toast('Todas las posiciones ya tienen un objetivo. Crea otra posición en Ajustes.', 'error');
+    return toast('Todas las posiciones ya tienen un objetivo. Crea otro espacio en Ajustes.', 'error');
   }
   const cubos = state.cubos.filter((c) => (goal && c.id === goal.cuboId) || (c.id !== 'vivienda' && !usados.has(c.id)));
   const overlay = document.createElement('div');
@@ -1710,7 +2208,7 @@ function modalRegistrar(mk = null) {
       <button class="card-link" id="reg-ajustar-ibercaja" type="button" style="margin-bottom:10px">Ajustar saldo actual de Ibercaja ${icono('flecha', 13)}</button>
       ${!snap && pagasConfig().activo && esMesDePaga(mes) ? `<p class="hint" style="margin-top:-6px;color:var(--gold)">🎁 Este mes toca paga extra (${eur(+pagasConfig().importe || 0)}): las aportaciones vienen ya con su parte repartida.</p>` : ''}
       <div class="form-card" id="reg-fields">
-        ${state.holdings.map((h) => {
+        ${holdingsActivos().map((h) => {
           const v = snap && snap.valores[h.id] != null ? String(snap.valores[h.id]).replace('.', ',') : '';
           let a = snap && snap.aportes[h.id] != null ? String(snap.aportes[h.id]).replace('.', ',') : '';
           const pg = pagasConfig();
@@ -1749,39 +2247,88 @@ function modalRegistrar(mk = null) {
   const btnIber = $('#reg-ajustar-ibercaja', overlay);
   if (btnIber) btnIber.onclick = () => { cerrar(); modalAjustarIbercaja(); };
   $('#reg-guardar', overlay).onclick = () => {
-    const valores = {}, aportes = {};
+    const valores = {}, aportes = {}, llenos = {};
     let vacio = true;
     for (const card of overlay.querySelectorAll('[data-hid]')) {
       const hid = card.dataset.hid;
-      const v = parseAmount($('.reg-valor', card).value) || 0;
+      const rawV = $('.reg-valor', card).value.trim();
+      const v = parseAmount(rawV) || 0;
       const a = parseAmount($('.reg-aporte', card).value) || 0;
-      valores[hid] = v; aportes[hid] = a;
+      valores[hid] = v; aportes[hid] = a; llenos[hid] = !!rawV;
       if (v !== 0 || a !== 0) vacio = false;
     }
     if (vacio && !snap) return toast('No hay valores que guardar', 'error');
     const snapActual = snapPorMes(mes);
-    if (snapActual) { snapActual.valores = valores; snapActual.aportes = aportes; stamp(snapActual); }
-    else {
+    const pg = pagasConfig();
+    if (snapActual) {
+      snapActual.valores = valores;
+      snapActual.aportes = aportes;
+      if (pg.activo && esMesDePaga(mes) && (+pg.importe || 0) > 0) {
+        const planTotal = state.holdings.reduce((a, h) => a + (+h.plan || 0), 0);
+        const totalAportes = Object.values(aportes).reduce((a, b) => a + (+b || 0), 0);
+        snapActual.pagaAplicada = totalAportes >= planTotal + (+pg.importe || 0) - 1;
+        if (snapActual.pagaAplicada) snapActual.pagaImporte = +pg.importe || 0;
+      }
+      stamp(snapActual);
+    } else {
       const nuevo = stamp({ id: mes, month: mes, valores, aportes });
-      const pg = pagasConfig();
-      if (pg.activo && esMesDePaga(mes) && (+pg.importe || 0) > 0) nuevo.pagaAplicada = true;
+      if (pg.activo && esMesDePaga(mes) && (+pg.importe || 0) > 0) {
+        const planTotal = state.holdings.reduce((a, h) => a + (+h.plan || 0), 0);
+        const totalAportes = Object.values(aportes).reduce((a, b) => a + (+b || 0), 0);
+        nuevo.pagaAplicada = totalAportes >= planTotal + (+pg.importe || 0) - 1;
+        if (nuevo.pagaAplicada) nuevo.pagaImporte = +pg.importe || 0;
+      }
       state.snapshots.push(nuevo);
     }
+    // El snapshot más reciente fija el saldo base de las cuentas de efectivo.
+    const esUltimo = !state.snapshots.some((s) => String(s.month) > String(mes));
+    if (esUltimo) {
+      for (const h of holdingsActivos()) {
+        if (!esCuentaEfectivo(h) || !llenos[h.id]) continue;
+        h.saldoBase = valores[h.id];
+        h.fechaBase = `${mes}-01`;
+        h.fechaBaseTs = new Date(`${mes}-01T00:00:00`).getTime();
+        stamp(h);
+      }
+    }
+    sincronizarAportesSnapshot(mes);
     guardarEstado(); cerrar(); toast(`Valores de ${fmtMes(mes)} guardados`); render();
   };
   if (snap) $('#reg-borrar', overlay).onclick = () => {
+    const eraUltimo = !state.snapshots.some((s) => String(s.month) > String(mes));
     tumba('snapshots', mes);
     state.snapshots = state.snapshots.filter((s) => s.month !== mes);
+    state.movimientos = (state.movimientos || []).filter((m) => m.origenSnapshot !== mes);
+    for (const h of state.holdings) {
+      if (h.snapshotUnidades && h.snapshotUnidades[mes]) {
+        h.unidades = Math.max(0, (+h.unidades || 0) - (+h.snapshotUnidades[mes] || 0));
+        delete h.snapshotUnidades[mes];
+        stamp(h);
+      }
+    }
+    if (eraUltimo) {
+      const prev = state.snapshots.filter((s) => String(s.month) < String(mes)).sort((a, b) => String(a.month).localeCompare(String(b.month))).pop();
+      if (prev) {
+        for (const h of holdingsActivos()) {
+          if (!esCuentaEfectivo(h) || prev.valores[h.id] == null) continue;
+          h.saldoBase = +prev.valores[h.id] || 0;
+          h.fechaBase = `${prev.month}-01`;
+          h.fechaBaseTs = new Date(`${prev.month}-01T00:00:00`).getTime();
+          stamp(h);
+        }
+      }
+    }
     guardarEstado(); cerrar(); toast('Registro del mes borrado'); render();
   };
 }
 
-/* ---- Modal: ajustar saldo actual de Ibercaja ---- */
-function modalAjustarIbercaja() {
-  const des = desgloseIbercaja();
-  const cfg = des.cfg;
+/* ---- Modal: ajustar saldo actual de una cuenta de efectivo ---- */
+function modalAjustarCuenta(hid = null) {
+  const h = hid ? holdingPorId(hid) : holdingIbercaja();
+  if (!h) return toast('No hay ninguna cuenta de efectivo', 'error');
+  const des = desgloseCuenta(h.id);
   const mesActual = currentMonthKey();
-  const fechaBase = new Date(cfg.fechaBase);
+  const fechaBase = new Date(`${h.fechaBase || ''}T00:00:00`);
   const fechaTxt = isFinite(fechaBase.getTime())
     ? fechaBase.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
     : 'sin fecha';
@@ -1791,28 +2338,42 @@ function modalAjustarIbercaja() {
     return `${positivo ? '+' : '−'}${eur(Math.abs(n))}`;
   };
   const overlay = document.createElement('div');
-  const pagasTxt = pagasConfig().activo ? ' y las pagas extra' : '';
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
     <div class="modal">
-      <h3>Saldo de Ibercaja</h3>
-      <p class="hint" style="margin-top:-6px">La nómina de ${eur(+state.ajustes.ingreso || 0)}${pagasTxt} se ${pagasConfig().activo ? 'añaden' : 'añade'} automáticamente el día de cobro. Los gastos, bizums y aportaciones a inversión se aplican en cuanto los registras.</p>
+      <h3>Saldo de ${escapeHtml(h.nombre)}</h3>
+      <p class="hint" style="margin-top:-6px">Saldo confirmado el ${fechaTxt}. A partir de ahí se aplican nóminas, gastos, compartidos, bizums y traspasos. Si cambias el salario, pulsa «Reconciliar» para fijar un nuevo punto de partida. Las pagas extra se aplican desde Inicio o Patrimonio y generan su propio ingreso y reparto.</p>
       <div class="ibercaja-desglose">
         <div><span>Saldo confirmado <small>${fechaTxt}</small></span><strong>${eur(des.base)}</strong></div>
         <div><span>Nóminas automáticas</span><strong class="pct-good">${conSigno(des.nominas)}</strong></div>
         ${des.pagas > 0 ? `<div><span>Pagas extra automáticas</span><strong class="pct-good">${conSigno(des.pagas)}</strong></div>` : ''}
+        ${des.ingresos > 0 ? `<div><span>Otros ingresos</span><strong class="pct-good">${conSigno(des.ingresos)}</strong></div>` : ''}
+        ${des.devoluciones > 0 ? `<div><span>Devoluciones</span><strong class="pct-good">${conSigno(des.devoluciones)}</strong></div>` : ''}
         <div><span>Gastos</span><strong class="pct-bad">${des.gastos > 0 ? `−${eur(des.gastos)}` : eur(0)}</strong></div>
+        ${des.compartidos > 0 ? `<div><span>Compartidos pagados por ti</span><strong class="pct-bad">−${eur(des.compartidos)}</strong></div>` : ''}
         <div><span>Bizums (neto)</span><strong class="${des.bizums >= 0 ? 'pct-good' : 'pct-bad'}">${conSigno(des.bizums)}</strong></div>
-        <div><span>Traspasos a inversión</span><strong class="${des.traspasos > 0 ? 'pct-bad' : 'pct-good'}">${conSigno(des.traspasos, true)}</strong></div>
+        ${des.inversiones > 0 ? `<div><span>Inversiones</span><strong class="pct-bad">−${eur(des.inversiones)}</strong></div>` : ''}
+        ${des.retiradas > 0 ? `<div><span>Retiradas de inversión</span><strong class="pct-good">+${eur(des.retiradas)}</strong></div>` : ''}
+        ${des.traspasosSalida > 0 ? `<div><span>Traspasos enviados</span><strong class="pct-bad">−${eur(des.traspasosSalida)}</strong></div>` : ''}
+        ${des.traspasosEntrada > 0 ? `<div><span>Traspasos recibidos</span><strong class="pct-good">+${eur(des.traspasosEntrada)}</strong></div>` : ''}
+        ${des.pagosDeuda > 0 ? `<div><span>Pagos de deuda</span><strong class="pct-bad">−${eur(des.pagosDeuda)}</strong></div>` : ''}
         <div class="total"><span>Saldo actual</span><strong>${eur(des.actual)}</strong></div>
       </div>
       <div class="field"><label for="ib-saldo">Nuevo saldo actual (€)</label>
         <input id="ib-saldo" type="text" inputmode="decimal" value="${des.actual.toFixed(2).replace('.', ',')}" autofocus /></div>
-      <div class="field"><label for="ib-dia">Día de cobro de la nómina</label>
-        <input id="ib-dia" type="number" min="1" max="31" value="${cfg.diaCobro || 1}" /></div>
-      <p class="hint">Al guardar, este saldo será el nuevo punto de partida y debe incluir los gastos y bizums ya registrados. Los movimientos posteriores se aplican automáticamente.</p>
+      <div class="field-row">
+        <div class="field"><label for="ib-dia">Día de cobro de la nómina</label>
+          <input id="ib-dia" type="number" min="1" max="31" value="${h.diaCobro || state.ajustes.diaCobro || 1}" /></div>
+        <div class="field"><label for="ib-auto">Nómina automática</label>
+          <select id="ib-auto">
+            <option value="1" ${h.autoNomina ? 'selected' : ''}>Sí, añadir nómina y pagas</option>
+            <option value="0" ${!h.autoNomina ? 'selected' : ''}>No, registrar ingresos a mano</option>
+          </select></div>
+      </div>
+      <p class="hint">Al guardar, este saldo será el nuevo punto de partida e incluirá los movimientos ya registrados hasta hoy. Los posteriores se aplican automáticamente.</p>
       <button class="card-link" id="ib-registrar" type="button">Registrar valores del mes ${icono('flecha', 14)}</button>
       <div class="modal-actions">
+        <button class="btn secondary" id="ib-reconciliar" type="button">Reconciliar al saldo actual</button>
         <button class="btn secondary" id="ib-cancelar" type="button">Cancelar</button>
         <button class="btn" id="ib-guardar" type="button">Guardar saldo</button>
       </div>
@@ -1823,20 +2384,26 @@ function modalAjustarIbercaja() {
   activarModal(overlay);
   $('#ib-cancelar', overlay).onclick = cerrar;
   $('#ib-registrar', overlay).onclick = () => { cerrar(); modalRegistrar(mesActual); };
+  $('#ib-reconciliar', overlay).onclick = () => {
+    $('#ib-saldo', overlay).value = String(saldoCuenta(h.id).toFixed(2)).replace('.', ',');
+    toast('Saldo actual cargado; pulsa Guardar para fijarlo');
+  };
   $('#ib-guardar', overlay).onclick = () => {
     const saldo = parseAmount($('#ib-saldo', overlay).value);
     if (saldo == null) return toast('Introduce un saldo válido', 'error');
     const dia = Math.min(31, Math.max(1, parseInt($('#ib-dia', overlay).value, 10) || 1));
-    const cuenta = cuentaIbercajaConfig();
-    cuenta.saldoBase = saldo;
-    cuenta.fechaBase = new Date().toISOString();
-    cuenta.aportesBase = totalAportesInversion();
-    cuenta.diaCobro = dia;
+    h.saldoBase = saldo;
+    h.fechaBase = hoyISO();
+    h.fechaBaseTs = Date.now() - 1;
+    h.diaCobro = dia;
+    h.autoNomina = $('#ib-auto', overlay).value === '1';
     state.ajustes.diaCobro = dia;
-    state.ajustes.mod = Date.now();
-    guardarEstado(); cerrar(); toast('Saldo de Ibercaja actualizado'); render();
+    stamp(h);
+    guardarEstado(); cerrar(); toast('Saldo actualizado'); render();
   };
 }
+
+function modalAjustarIbercaja() { return modalAjustarCuenta(holdingIbercaja() ? holdingIbercaja().id : null); }
 
 /* ============ Vista: Patrimonio ============ */
 function vistaPatrimonio(view) {
@@ -1844,21 +2411,23 @@ function vistaPatrimonio(view) {
   const stats = statsPatrimonio();
   const saldos = saldosActuales();
   const totalActual = saldos.total;
-  const ajuste = ajusteIbercaja();
-  const iber = holdingIbercaja();
+  const totalActivos = saldos.activos;
   const dist = distribucionCubos()
-    .map((b) => ({ ...b, total: b.id === 'diaadia' ? b.total + ajuste : b.total }))
-    .filter((b) => b.total > 0)
-    .map((b) => ({ ...b, pct: totalActual > 0 ? b.total / totalActual : 0 }))
+    .map((b) => ({ ...b, pct: totalActivos > 0 ? b.total / totalActivos : 0 }))
     .sort((a, b) => b.total - a.total);
-  const ingresos = +state.ajustes.ingreso || 0;
-  const gastoMes = totalGastado(currentMonthKey());
-  const aportesMes = aportesSnap(currentMonthKey());
-  const serie = stats.serie;
-  const ultimoMes = stats.ultimo ? stats.ultimo.month : currentMonthKey();
   const mesActual = currentMonthKey();
+  const flujo = flujoMes(mesActual);
+  const comp = balancesCompartidos();
+  const compRows = Object.entries(comp.saldo || {}).map(([id, saldo]) => {
+    const p = personasLista().find((x) => x.id === id);
+    return `<div class="money-row"><div><div class="lbl">${escapeHtml(p ? p.nombre : '—')}</div><div class="sub">${saldo > 0.004 ? 'te debe' : saldo < -0.004 ? 'le debes' : 'en paz'}</div></div><div class="val ${saldo > 0.004 ? 'pct-good' : saldo < -0.004 ? 'pct-bad' : ''}">${saldo > 0 ? '+' : saldo < 0 ? '−' : ''}${eur(Math.abs(saldo))}</div></div>`;
+  }).join('');
+  const serie = stats.serie;
+  const ultimoMes = stats.ultimo ? stats.ultimo.month : mesActual;
   const snActual = snapPorMes(mesActual);
-  const pagaPendiente = pagasConfig().activo && esMesDePaga(mesActual) && (!snActual || !snActual.pagaAplicada);
+  const pagasPend = pagasPendientes();
+  const pagaPendienteMk = pagasPend[0] || null;
+  const pagaPendiente = !!pagaPendienteMk;
   const faltaMes = !snActual;
   const variacion = stats.perfMes != null ? stats.perfMes : stats.roi;
   const variacionEsMes = stats.perfMes != null;
@@ -1867,48 +2436,77 @@ function vistaPatrimonio(view) {
     ? lineaChart(serie.map((s) => s.post), serie.map((s) => `${MESES_CORTOS[+s.month.split('-')[1] - 1]} ${s.month.slice(2, 4)}`))
     : '';
 
-  const donut = donutSVG(dist.map((b) => ({ valor: b.total, color: colorCubo(b.id) })), { size: 140, grosor: 22 });
+  const donut = donutSVG(dist.map((b) => ({ valor: b.total, color: colorCubo(b.id) })), { size: 140, grosor: 22, valor: eur0(totalActivos), etiqueta: 'activos' });
 
   const leyenda = dist.map((b) => `
     <div class="pat-legend-row">
       <span class="pat-legend-dot" style="background:${colorCubo(b.id)}"></span>
       <span class="pat-legend-name">${escapeHtml(b.nombre)}</span>
-      <span class="pat-legend-pct">${fmtPct(b.pct, { conSigno: false, decimales: 0 })}</span>
+      <span class="pat-legend-pct">${fmtPct(b.pct, { conSigno: false, decimales: 0 })}${b.objetivo ? ` · obj ${b.objetivo} %` : ''}</span>
     </div>`).join('');
 
-  const cuentas = state.holdings.map((h) => {
-    const st = statsHolding(h.id);
-    const cubo = cuboPorId(h.cubo);
-    const esIber = iber && h.id === iber.id;
-    const valor = st.valorActual + (esIber ? ajuste : 0);
-    const pct = totalActual > 0 ? valor / totalActual : null;
+  const cuentas = holdingsActivos().map((h) => {
+    const valor = valorHolding(h.id);
+    const pct = totalActivos > 0 ? valor / totalActivos : null;
     const color = colorCubo(h.cubo);
-    const tipo = cubo ? cubo.nombre : 'Sin espacio';
-    return `<button class="pat-account-row" type="button" data-open="${h.id}" aria-label="${esIber ? 'Ajustar saldo de ' : 'Ver y registrar '}${escapeHtml(h.nombre)}">
+    const cubo = cuboPorId(h.cubo);
+    const esEfectivo = esCuentaEfectivo(h);
+    const tipo = `${esEfectivo ? 'Efectivo' : esInversion(h) ? 'Inversión' : h.tipo === 'inmueble' ? 'Inmueble' : 'Posición'} · ${h.entidad || 'Otra'}`;
+    return `<button class="pat-account-row" type="button" data-open="${h.id}" aria-label="${esEfectivo ? 'Ajustar saldo de ' : 'Editar '}${escapeHtml(h.nombre)}">
       <span class="pat-account-ico" style="color:${color};background:${color}1a;border-color:${color}30">${iconoCubo(h.cubo)}</span>
       <span class="pat-account-main">
         <strong class="pat-account-name" title="${escapeHtml(h.nombre)}">${escapeHtml(h.nombre)}</strong>
-        <span class="pat-account-type">${escapeHtml(tipo)}${esIber ? ' · automático' : ''}</span>
+        <span class="pat-account-type">${escapeHtml(tipo)}${cubo ? ' · ' + escapeHtml(cubo.nombre) : ''}</span>
         <span class="pat-account-amount">${eur(valor)}</span>
       </span>
       <span class="pat-account-pct">${pct == null ? '—' : fmtPct(pct, { conSigno: false, decimales: 0 })}</span>
-      <span class="pat-account-arrow" aria-hidden="true">${esIber ? icono('editar', 15) : icono('chevron', 15)}</span>
+      <span class="pat-account-arrow" aria-hidden="true">${esEfectivo ? icono('editar', 15) : icono('chevron', 15)}</span>
     </button>`;
   }).join('');
 
-  const metricas = state.holdings.map((h) => {
+  const metricas = holdingsActivos().map((h) => {
     const st = statsHolding(h.id);
     const perf = perfHolding(h.id, ultimoMes);
+    const tir = xirrHolding(h.id);
     const labelVar = stats.ultimo ? MESES_CORTOS[+ultimoMes.split('-')[1] - 1] : 'mes';
     return `<div class="pat-metric-row">
       <div class="pat-metric-name" title="${escapeHtml(h.nombre)}">${escapeHtml(h.nombre)}</div>
       <div class="pat-metric-values">
+        <span><small>Valor</small><strong>${eur(st.valorActual)}</strong></span>
         <span><small>Aportado</small><strong>${eur(st.aportado)}</strong></span>
-        <span><small>Rentab. total</small><strong class="${st.roi != null && st.roi >= 0 ? 'pct-good' : st.roi != null ? 'pct-bad' : ''}">${fmtPct(st.roi)}</strong></span>
+        <span><small>XIRR</small><strong class="${tir != null && tir >= 0 ? 'pct-good' : tir != null ? 'pct-bad' : ''}">${fmtPct(tir)}</strong></span>
         <span><small>Var. ${labelVar}</small><strong class="${perf != null && perf >= 0 ? 'pct-good' : perf != null ? 'pct-bad' : ''}">${fmtPct(perf)}</strong></span>
       </div>
     </div>`;
   }).join('');
+
+  const deudas = (state.deudas || []).length
+    ? state.deudas.map((d) => `<div class="pat-debt-row">
+        <div class="pat-debt-main"><strong>${escapeHtml(d.nombre)}</strong><span>${escapeHtml(d.tipo || 'Deuda')}${d.entidad ? ' · ' + escapeHtml(d.entidad) : ''}${d.tipoInteres ? ` · ${d.tipoInteres} %` : ''}</span></div>
+        <div class="pat-debt-values"><strong>${eur(d.saldo)}</strong><span>${d.cuota ? `Cuota ${eur(d.cuota)}/mes` : 'Sin cuota'}</span></div>
+        <button class="icon-btn" type="button" data-deuda-edit="${d.id}" aria-label="Editar deuda">${icono('editar', 15)}</button>
+        <button class="icon-btn danger" type="button" data-deuda-del="${d.id}" aria-label="Eliminar deuda">${icono('basura', 15)}</button>
+      </div>`).join('')
+    : '<div class="empty" style="padding:16px"><span class="big">🏦</span>Sin deudas registradas. Añade hipoteca, préstamos o tarjetas para calcular tu patrimonio neto real.</div>';
+
+  const rebalanceo = dist.filter((b) => +b.objetivo > 0).map((b) => {
+    const objetivoImporte = totalActivos * (+b.objetivo || 0) / 100;
+    const delta = objetivoImporte - b.total;
+    return `<div class="money-row"><div><div class="lbl">${escapeHtml(b.nombre)}</div><div class="sub">Objetivo ${b.objetivo} % · real ${(b.pct * 100).toFixed(1).replace('.', ',')} %</div></div><div class="val ${Math.abs(delta) < 1 ? 'pct-good' : 'pct-warn'}">${delta > 0 ? 'Aportar ' : delta < 0 ? 'Retirar ' : ''}${eur(Math.abs(delta))}</div></div>`;
+  }).join('');
+
+  const entidades = distribucionEntidades().map((x) => `
+    <div class="money-row"><div><div class="lbl">${escapeHtml(x.entidad)}</div><div class="sub">${fmtPct(totalActivos > 0 ? x.total / totalActivos : 0, { conSigno: false, decimales: 0 })} del activo</div></div><div class="val">${eur(x.total)}</div></div>
+  `).join('') || '<div class="hint">Sin posiciones.</div>';
+
+  const clases = distribucionClases().map((x) => {
+    const objetivo = +(state.plan.asignacionObjetivo || {})[x.clase] || 0;
+    const desvio = objetivo > 0 ? x.pct * 100 - objetivo : null;
+    return `<div class="money-row">
+      <div><div class="lbl">${escapeHtml(x.clase)}</div><div class="sub">Objetivo ${objetivo} %${desvio != null ? ` · ${desvio > 0 ? '+' : ''}${desvio.toFixed(1).replace('.', ',')} pp` : ''}</div></div>
+      <div class="val">${eur(x.valor)} <span class="tiny">${fmtPct(x.pct, { conSigno: false, decimales: 0 })}</span></div>
+    </div>`;
+  }).join('') || '<div class="hint">Sin posiciones.</div>';
 
   const historial = serie.slice().reverse().slice(0, 12).map((s) => {
     const idx = stats.serie.indexOf(s);
@@ -1928,14 +2526,18 @@ function vistaPatrimonio(view) {
 
   view.innerHTML = `
     <header class="page-head pat-head">
-      <h1>Patrimonio</h1>
-      <button class="icon-btn pat-reg-btn" id="pat-registrar" type="button" aria-label="Registrar valores" title="Registrar valores">${icono('editar', 18)}</button>
+      <div><span class="eyebrow">Balance y cartera</span><h1>Patrimonio</h1></div>
+      <div class="page-head-actions">
+        <button class="btn secondary small" id="pat-add-cuenta" type="button">${icono('mas', 15)} Cuenta</button>
+        <button class="btn secondary small" id="pat-add-deuda" type="button">${icono('mas', 15)} Deuda</button>
+        <button class="icon-btn pat-reg-btn" id="pat-registrar" type="button" aria-label="Registrar valores" title="Registrar valores">${icono('editar', 18)}</button>
+      </div>
     </header>
 
     ${pagaPendiente ? `
     <div class="banner">
       <span class="banner-ico">${icono('calendario', 19)}</span>
-      <div class="banner-text"><strong>Paga extra de ${fmtMes(mesActual).toLowerCase()}</strong>${eur(+pagasConfig().importe || 0)} pendiente de aplicar a tus aportaciones.</div>
+      <div class="banner-text"><strong>Paga extra de ${fmtMes(pagaPendienteMk).toLowerCase()}</strong>${eur(+pagasConfig().importe || 0)} pendiente de aplicar a tus aportaciones.</div>
       <button class="btn small" id="pat-banner-btn" type="button">Aplicar paga</button>
     </div>` : faltaMes ? `
     <div class="banner" style="border-color:var(--border);background:var(--card)">
@@ -1947,16 +2549,23 @@ function vistaPatrimonio(view) {
     <div class="pat-layout">
       <div class="stack">
         <section class="card pat-total">
-          <span class="pat-total-label">Patrimonio total</span>
+          <span class="pat-total-label">Patrimonio neto</span>
           <div class="pat-total-value">${eur(totalActual)}</div>
           <div class="pat-total-trend ${variacion == null ? 'neutral' : variacion < 0 ? 'negative' : 'positive'}">
             ${variacion != null ? `<span class="trend-mark" aria-hidden="true">${variacion < 0 ? '▼' : '▲'}</span>` : ''}
             <strong>${variacion == null ? '—' : fmtPct(variacion, { decimales: 1 })}</strong>
-            <span>${variacionEsMes ? 'este mes' : variacion != null ? 'desde el inicio' : 'sin datos'}</span>
+            <span>${variacionEsMes ? 'desde el último registro' : variacion != null ? 'desde el inicio' : 'sin datos'}</span>
+          </div>
+          <div class="pat-net-breakdown">
+            <div><span>Activos</span><strong>${eur(saldos.activos)}</strong></div>
+            <div><span>Por cobrar</span><strong class="pct-good">${eur(saldos.porCobrar)}</strong></div>
+            <div><span>Por pagar</span><strong class="pct-bad">${eur(saldos.porPagar)}</strong></div>
+            <div><span>Deudas</span><strong class="pct-bad">${eur(saldos.deudas)}</strong></div>
           </div>
         </section>
 
         <section class="card pat-dist-card" aria-label="Distribución del patrimonio">
+          <div class="card-head"><div><h2>Distribución</h2><p>Sobre activos, no sobre patrimonio neto</p></div></div>
           <div class="pat-dist">
             <div class="pat-donut">${donut}</div>
             <div class="pat-legend">${leyenda || '<span class="pat-legend-empty">Sin posiciones registradas.</span>'}</div>
@@ -1966,25 +2575,35 @@ function vistaPatrimonio(view) {
 
       <div class="stack">
         <section class="card pat-accounts-card" aria-label="Cuentas y patrimonio">
+          <div class="card-head"><div><h2>Cuentas y posiciones</h2><p>Toca una cuenta de efectivo para conciliar su saldo</p></div></div>
           <div class="pat-account-list">${cuentas || '<div class="empty">Añade posiciones en Ajustes para empezar.</div>'}</div>
         </section>
       </div>
     </div>
 
+    <section class="card" style="margin-top:16px">
+      <div class="card-head">
+        <div><h2>Deudas</h2><p>Hipoteca, préstamos, tarjetas y compras a plazos</p></div>
+        <button class="btn secondary small" id="pat-add-deuda-2" type="button">${icono('mas', 15)} Añadir deuda</button>
+      </div>
+      <div class="pat-debt-list">${deudas}</div>
+    </section>
+
     <details class="pat-more">
       <summary class="pat-more-summary">
-        <span class="pat-more-summary-main"><strong>Historial y detalles</strong><span>Evolución, flujo mensual y entidades</span></span>
+        <span class="pat-more-summary-main"><strong>Historial y detalles</strong><span>Evolución, rentabilidad, flujo, entidades y cartera</span></span>
         ${icono('chevron', 16)}
       </summary>
       <div class="pat-more-body">
         <div class="pat-more-links">
           <button class="card-link" data-nav="analisis" type="button">Ver análisis ${icono('flecha', 14)}</button>
           <button class="card-link" data-nav="objetivos" type="button">Ver objetivos ${icono('flecha', 14)}</button>
+          <button class="card-link" data-nav="plan" type="button">Ver plan ${icono('flecha', 14)}</button>
         </div>
 
         <section class="card">
           <div class="card-head">
-            <div><h2>Evolución</h2><p>Patrimonio registrado mes a mes · el saldo actual de Ibercaja incluye movimientos automáticos</p></div>
+            <div><h2>Evolución</h2><p>Patrimonio registrado mes a mes · el último punto usa el saldo actual</p></div>
             ${stats.perfMes != null ? `<span class="pill ${stats.perfMes >= 0 ? 'good' : 'bad'}">${fmtPct(stats.perfMes)} último mes</span>` : ''}
           </div>
           ${chart ? `<div class="chart-wrap">${chart}</div>` : '<div class="empty" style="padding:18px"><span class="big">📈</span>Registra al menos dos meses para ver la evolución.</div>'}
@@ -1992,40 +2611,41 @@ function vistaPatrimonio(view) {
 
         <section class="card">
           <div class="card-head">
-            <div><h2>Rentabilidad por posición</h2><p>Aportado total ${eur(stats.aportado)} · toca una cuenta para registrar valores</p></div>
+            <div><h2>Rentabilidad por posición</h2><p>XIRR = rentabilidad anual ponderada por dinero y tiempo · toca una cuenta para editar</p></div>
           </div>
           <div class="pat-metrics">${metricas || '<div class="empty">Sin posiciones registradas.</div>'}</div>
         </section>
 
         <section class="card">
-          <div class="card-head"><div><h2>Este mes</h2><p>Flujo del mes en curso</p></div></div>
+          <div class="card-head"><div><h2>Flujo del mes</h2><p>Ingresos, gastos, inversión y tasa de ahorro</p></div></div>
           <div class="stat-grid two">
-            <div class="stat"><div class="label">Ingreso mensual</div><div class="value">${eur(ingresos)}</div></div>
-            <div class="stat"><div class="label">Gasto del mes</div><div class="value">${eur(gastoMes)} <span class="tiny ${gastoMes > ingresos && ingresos > 0 ? 'pct-bad' : ''}">${ingresos > 0 ? fmtPct(gastoMes / ingresos, { conSigno: false, decimales: 0 }) : ''}</span></div></div>
-            <div class="stat"><div class="label">Aportación</div><div class="value">${aportesMes == null ? 'sin registrar' : eur0(aportesMes)}</div></div>
-            <div class="stat"><div class="label">Sobra estimada</div><div class="value ${ingresos - gastoMes > 0 ? 'pct-good' : ingresos > 0 ? 'pct-bad' : ''}">${ingresos > 0 ? eur(ingresos - gastoMes) : '—'}</div></div>
+            <div class="stat"><div class="label">Ingresos</div><div class="value">${eur(flujo.ingresos.total)}</div><div class="hint">Nómina ${eur0(flujo.ingresos.nomina)}${flujo.ingresos.paga ? ` · paga ${eur0(flujo.ingresos.paga)}` : ''}${flujo.ingresos.otros ? ` · otros ${eur0(flujo.ingresos.otros)}` : ''}</div></div>
+            <div class="stat"><div class="label">Gastos</div><div class="value">${eur(flujo.gastos)}</div><div class="hint">${flujo.ingresos.total > 0 ? fmtPct(flujo.gastos / flujo.ingresos.total, { conSigno: false, decimales: 0 }) + ' de los ingresos' : 'sin ingresos registrados'}</div></div>
+            <div class="stat"><div class="label">Ahorro e inversión</div><div class="value">${eur(flujo.aportes)}</div><div class="hint">Aportaciones y movimientos de inversión</div></div>
+            <div class="stat"><div class="label">Tasa de ahorro</div><div class="value ${flujo.tasaAhorro != null && flujo.tasaAhorro >= 0.2 ? 'pct-good' : flujo.tasaAhorro != null && flujo.tasaAhorro < 0 ? 'pct-bad' : ''}">${fmtPct(flujo.tasaAhorro, { conSigno: false, decimales: 1 })}</div><div class="hint">${flujo.ahorro >= 0 ? `Sobra ${eur(flujo.ahorro)} antes de invertir` : `Déficit ${eur(-flujo.ahorro)}`}</div></div>
           </div>
         </section>
 
         <section class="card">
-          <div class="card-head">
-            <div><h2>Tu dinero por entidad</h2><p>Dónde está el dinero ahora mismo</p></div>
-            <button class="btn secondary small" id="pat-saldos" type="button">${icono('editar', 15)} Actualizar</button>
-          </div>
-          <div class="money-row">
-            <div><div class="lbl">Ibercaja</div><div class="sub">Día a día</div></div>
-            <div class="val">${eur(saldos.diaadia)}</div>
-          </div>
-          <div class="money-row">
-            <div><div class="lbl">Trade Republic · efectivo</div><div class="sub">Colchón ${eur0(saldos.colchon)} · Ahorro ${eur0(saldos.ahorro)}${saldos.viajes > 0 ? ` (viajes ${eur0(saldos.viajes)})` : ''}</div></div>
-            <div class="val">${eur(saldos.efectivoTR)}</div>
-          </div>
-          <div class="money-row">
-            <div><div class="lbl">Trade Republic · inversión</div><div class="sub">ETF en cartera</div></div>
-            <div class="val">${eur(saldos.inversion)}</div>
-          </div>
-          ${saldos.otros > 0.5 ? `<div class="money-row"><div><div class="lbl">Otras posiciones</div></div><div class="val">${eur(saldos.otros)}</div></div>` : ''}
-          <div class="money-total"><span>Total</span><strong>${eur(saldos.total)}</strong></div>
+          <div class="card-head"><div><h2>Por entidad</h2><p>Dónde está el dinero ahora mismo</p></div></div>
+          ${entidades}
+          <div class="money-total"><span>Activos</span><strong>${eur(saldos.activos)}</strong></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><div><h2>Por clase de activo</h2><p>Comparación con tu asignación objetivo</p></div><button class="card-link" data-nav="plan" type="button">Editar objetivo ${icono('chevron', 13)}</button></div>
+          ${clases}
+        </section>
+
+        <section class="card">
+          <div class="card-head"><div><h2>Rebalanceo por espacio</h2><p>Cuánto te falta o sobra para tu reparto objetivo</p></div><button class="card-link" data-nav="ajustes" type="button">Editar espacios ${icono('chevron', 13)}</button></div>
+          ${rebalanceo || '<div class="hint">Define porcentajes objetivo en Ajustes → Reparto objetivo del patrimonio.</div>'}
+        </section>
+
+        <section class="card">
+          <div class="card-head"><div><h2>Compartidos</h2><p>Derechos de cobro y obligaciones con otras personas</p></div><button class="card-link" data-nav="compartidos" type="button">Abrir ${icono('chevron', 13)}</button></div>
+          ${compRows || '<div class="hint">Sin saldos pendientes.</div>'}
+          <div class="money-total"><span>Neto</span><strong class="${comp.neto >= 0 ? 'pct-good' : 'pct-bad'}">${comp.neto >= 0 ? '+' : '−'}${eur(Math.abs(comp.neto))}</strong></div>
         </section>
 
         <section class="card">
@@ -2037,23 +2657,36 @@ function vistaPatrimonio(view) {
   `;
 
   cablearNavegacion(view);
-  ['#pat-registrar', '#pat-saldos'].forEach((sel) => {
-    const b = $(sel);
-    if (b) b.onclick = () => modalRegistrar(mesActual);
-  });
+  const reg = $('#pat-registrar');
+  if (reg) reg.onclick = () => modalRegistrar(mesActual);
+  const addCuenta = $('#pat-add-cuenta');
+  if (addCuenta) addCuenta.onclick = () => modalCuenta();
+  const addDeuda = $('#pat-add-deuda');
+  if (addDeuda) addDeuda.onclick = () => modalDeuda();
+  const addDeuda2 = $('#pat-add-deuda-2');
+  if (addDeuda2) addDeuda2.onclick = () => modalDeuda();
   const bannerBtn = $('#pat-banner-btn');
-  if (bannerBtn) bannerBtn.onclick = () => pagaPendiente ? aplicarPaga(mesActual) : modalRegistrar(mesActual);
+  if (bannerBtn) bannerBtn.onclick = () => pagaPendiente ? aplicarPaga(pagaPendienteMk || mesActual) : modalRegistrar(mesActual);
   view.querySelectorAll('[data-open]').forEach((el) => {
     el.onclick = () => {
       const hid = el.dataset.open;
       const h = holdingPorId(hid);
-      const iberActual = holdingIbercaja();
-      if (h && iberActual && h.id === iberActual.id) {
-        modalAjustarIbercaja();
-        return;
-      }
-      const serieH = serieHolding(hid);
-      modalRegistrar(serieH.length ? serieH[serieH.length - 1].month : mesActual);
+      if (!h) return;
+      if (esCuentaEfectivo(h)) modalAjustarCuenta(hid);
+      else modalEditarPosicion(hid);
+    };
+  });
+  view.querySelectorAll('[data-deuda-edit]').forEach((b) => {
+    b.onclick = () => modalDeuda(b.dataset.deudaEdit);
+  });
+  view.querySelectorAll('[data-deuda-del]').forEach((b) => {
+    b.onclick = () => {
+      const d = deudaPorId(b.dataset.deudaDel);
+      if (!d) return;
+      if (!confirm(`¿Eliminar la deuda «${d.nombre}»?`)) return;
+      tumba('deudas', d.id);
+      state.deudas = state.deudas.filter((x) => x.id !== d.id);
+      guardarEstado(); toast('Deuda eliminada'); render();
     };
   });
   view.querySelectorAll('[data-mes]').forEach((el) => {
@@ -2061,8 +2694,1104 @@ function vistaPatrimonio(view) {
   });
 }
 
-/* === BEGIN-FUSIONAR === */
-const COLECCIONES = ['gastos', 'snapshots', 'categorias', 'holdings', 'cubos', 'personas', 'compartidosEventos', 'bizums', 'objetivos'];
+/* ============ Modales de cuentas, posiciones y deudas ============ */
+function modalCuenta(hid = null) {
+  const h = hid ? holdingPorId(hid) : null;
+  const esNueva = !h;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const cubos = state.cubos.map((c) => `<option value="${c.id}" ${h && h.cubo === c.id ? 'selected' : ''}>${escapeHtml(c.nombre)}</option>`).join('');
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>${esNueva ? 'Nueva cuenta o posición' : 'Editar posición'}</h3>
+      <div class="form-card">
+        <div class="field"><label for="cta-nombre">Nombre</label>
+          <input id="cta-nombre" type="text" value="${h ? escapeHtml(h.nombre) : ''}" placeholder="Ej.: Cuenta remunerada MyInvestor" /></div>
+        <div class="field-row">
+          <div class="field"><label for="cta-entidad">Entidad</label>
+            <input id="cta-entidad" type="text" value="${h ? escapeHtml(h.entidad || '') : ''}" placeholder="Ej.: MyInvestor" /></div>
+          <div class="field"><label for="cta-tipo">Tipo</label>
+            <select id="cta-tipo">
+              ${[['efectivo', 'Efectivo / cuenta'], ['inversion', 'Inversión'], ['inmueble', 'Inmueble'], ['otro', 'Otro']].map(([v, t]) => `<option value="${v}" ${h && h.tipo === v ? 'selected' : (!h && v === 'efectivo' ? 'selected' : '')}>${t}</option>`).join('')}
+            </select></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="cta-clase">Clase de activo</label>
+            <select id="cta-clase">
+              ${[['efectivo', 'Efectivo'], ['rentaVariable', 'Renta variable'], ['rentaFija', 'Renta fija'], ['cripto', 'Cripto'], ['inmueble', 'Inmueble'], ['otro', 'Otro']].map(([v, t]) => `<option value="${v}" ${h && h.clase === v ? 'selected' : ''}>${t}</option>`).join('')}
+            </select></div>
+          <div class="field"><label for="cta-cubo">Espacio / objetivo</label>
+            <select id="cta-cubo">${cubos}</select></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="cta-plan">Aportación planificada (€/mes)</label>
+            <input id="cta-plan" type="text" inputmode="decimal" value="${h ? String(h.plan || 0).replace('.', ',') : '0'}" /></div>
+          <div class="field"><label for="cta-moneda">Moneda</label>
+            <input id="cta-moneda" type="text" value="${h ? escapeHtml(h.moneda || 'EUR') : 'EUR'}" maxlength="3" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="cta-saldo">Saldo base / valor inicial (€)</label>
+            <input id="cta-saldo" type="text" inputmode="decimal" value="${h ? String(h.saldoBase != null ? h.saldoBase : 0).replace('.', ',') : '0'}" /></div>
+          <div class="field"><label for="cta-fecha">Fecha del saldo base</label>
+            <input id="cta-fecha" type="date" value="${h && h.fechaBase ? h.fechaBase : hoyISO()}" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="cta-auto">Nómina automática</label>
+            <select id="cta-auto">
+              <option value="0" ${!h || !h.autoNomina ? 'selected' : ''}>No</option>
+              <option value="1" ${h && h.autoNomina ? 'selected' : ''}>Sí (solo cuentas de efectivo)</option>
+            </select></div>
+          <div class="field"><label for="cta-dia">Día de cobro</label>
+            <input id="cta-dia" type="number" min="1" max="31" value="${h && h.diaCobro ? h.diaCobro : (state.ajustes.diaCobro || 1)}" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="cta-isin">ISIN / ticker</label>
+            <input id="cta-isin" type="text" value="${h ? escapeHtml(h.isin || '') : ''}" placeholder="IE00BK5BQT80" /></div>
+          <div class="field"><label for="cta-comision">Comisión anual (%)</label>
+            <input id="cta-comision" type="text" inputmode="decimal" value="${h ? String(h.comision || 0).replace('.', ',') : '0,20'}" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="cta-unidades">Unidades</label>
+            <input id="cta-unidades" type="text" inputmode="decimal" value="${h ? String(h.unidades || 0).replace('.', ',') : '0'}" /></div>
+          <div class="field"><label for="cta-precio">Precio por unidad (€)</label>
+            <input id="cta-precio" type="text" inputmode="decimal" value="${h ? String(h.precio || 0).replace('.', ',') : '0'}" /></div>
+        </div>
+        <p class="hint">En cuentas de efectivo, el saldo se deriva del saldo base más nóminas, gastos, bizums, compartidos y traspasos. En inversión, si rellenas unidades y precio se usa el valor de mercado; si no, se usa el último registro mensual.</p>
+      </div>
+      <div class="modal-actions">
+        ${h ? '<button class="btn danger" id="cta-archivar" type="button">Archivar</button>' : ''}
+        <button class="btn secondary" id="cta-cancel" type="button">Cancelar</button>
+        <button class="btn" id="cta-save" type="button">${esNueva ? 'Crear' : 'Guardar'}</button>
+      </div>
+    </div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
+  $('#cta-cancel', overlay).onclick = cerrar;
+  if (h) $('#cta-archivar', overlay).onclick = () => {
+    if (!confirm(`¿Archivar «${h.nombre}»? Su historial se conserva y deja de contar en el patrimonio actual.`)) return;
+    h.archivada = true;
+    h.activa = false;
+    stamp(h);
+    guardarEstado(); cerrar(); toast('Posición archivada'); render();
+  };
+  $('#cta-save', overlay).onclick = () => {
+    const nombre = $('#cta-nombre', overlay).value.trim();
+    if (!nombre) return toast('Ponle un nombre', 'error');
+    const datos = {
+      nombre,
+      entidad: $('#cta-entidad', overlay).value.trim() || 'Otra',
+      tipo: $('#cta-tipo', overlay).value,
+      clase: $('#cta-clase', overlay).value,
+      cubo: $('#cta-cubo', overlay).value,
+      plan: Math.max(0, parseAmount($('#cta-plan', overlay).value) ?? 0),
+      moneda: ($('#cta-moneda', overlay).value.trim() || 'EUR').toUpperCase().slice(0, 3),
+      saldoBase: parseAmount($('#cta-saldo', overlay).value) ?? 0,
+      fechaBase: $('#cta-fecha', overlay).value || hoyISO(),
+      autoNomina: $('#cta-auto', overlay).value === '1',
+      diaCobro: Math.min(31, Math.max(1, parseInt($('#cta-dia', overlay).value, 10) || 1)),
+      isin: $('#cta-isin', overlay).value.trim(),
+      comision: Math.max(0, parseAmount($('#cta-comision', overlay).value) ?? 0),
+      unidades: Math.max(0, parseAmount($('#cta-unidades', overlay).value) ?? 0),
+      precio: Math.max(0, parseAmount($('#cta-precio', overlay).value) ?? 0),
+    };
+    if (h) Object.assign(h, datos);
+    else state.holdings.push({ id: uid(), ...datos });
+    stamp(h || state.holdings[state.holdings.length - 1]);
+    guardarEstado(); cerrar(); toast(esNueva ? 'Cuenta creada' : 'Posición actualizada'); render();
+  };
+}
+
+function modalEditarPosicion(hid) { return modalCuenta(hid); }
+
+function modalDeuda(id = null) {
+  const d = id ? deudaPorId(id) : null;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>${d ? 'Editar deuda' : 'Nueva deuda'}</h3>
+      <div class="form-card">
+        <div class="field"><label for="deu-nombre">Nombre</label>
+          <input id="deu-nombre" type="text" value="${d ? escapeHtml(d.nombre) : ''}" placeholder="Ej.: Hipoteca vivienda" /></div>
+        <div class="field-row">
+          <div class="field"><label for="deu-tipo">Tipo</label>
+            <select id="deu-tipo">
+              ${[['hipoteca', 'Hipoteca'], ['prestamo', 'Préstamo'], ['tarjeta', 'Tarjeta'], ['otro', 'Otra']].map(([v, t]) => `<option value="${v}" ${d && d.tipo === v ? 'selected' : ''}>${t}</option>`).join('')}
+            </select></div>
+          <div class="field"><label for="deu-entidad">Entidad</label>
+            <input id="deu-entidad" type="text" value="${d ? escapeHtml(d.entidad || '') : ''}" placeholder="Ej.: Ibercaja" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="deu-saldo">Saldo pendiente (€)</label>
+            <input id="deu-saldo" type="text" inputmode="decimal" value="${d ? String(d.saldo || 0).replace('.', ',') : '0'}" /></div>
+          <div class="field"><label for="deu-interes">Tipo de interés (%)</label>
+            <input id="deu-interes" type="text" inputmode="decimal" value="${d ? String(d.tipoInteres || 0).replace('.', ',') : '0'}" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="deu-cuota">Cuota mensual (€)</label>
+            <input id="deu-cuota" type="text" inputmode="decimal" value="${d ? String(d.cuota || 0).replace('.', ',') : '0'}" /></div>
+          <div class="field"><label for="deu-plazo">Plazo restante (meses)</label>
+            <input id="deu-plazo" type="number" min="0" value="${d ? d.plazoMeses || 0 : 0}" /></div>
+        </div>
+        <div class="field"><label for="deu-notas">Notas</label>
+          <input id="deu-notas" type="text" value="${d ? escapeHtml(d.notas || '') : ''}" placeholder="Opcional" /></div>
+        <p class="hint">Las deudas se restan del patrimonio neto. Si registras un pago de deuda como movimiento, reduce el saldo pendiente y la cuenta de efectivo.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="deu-cancel" type="button">Cancelar</button>
+        <button class="btn" id="deu-save" type="button">${d ? 'Guardar' : 'Crear'}</button>
+      </div>
+    </div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
+  $('#deu-cancel', overlay).onclick = cerrar;
+  $('#deu-save', overlay).onclick = () => {
+    const nombre = $('#deu-nombre', overlay).value.trim();
+    if (!nombre) return toast('Ponle un nombre', 'error');
+    const datos = {
+      nombre,
+      tipo: $('#deu-tipo', overlay).value,
+      entidad: $('#deu-entidad', overlay).value.trim(),
+      saldo: Math.max(0, parseAmount($('#deu-saldo', overlay).value) ?? 0),
+      tipoInteres: Math.max(0, parseAmount($('#deu-interes', overlay).value) ?? 0),
+      cuota: Math.max(0, parseAmount($('#deu-cuota', overlay).value) ?? 0),
+      plazoMeses: Math.max(0, parseInt($('#deu-plazo', overlay).value, 10) || 0),
+      notas: $('#deu-notas', overlay).value.trim(),
+    };
+    if (d) Object.assign(d, datos);
+    else state.deudas.push({ id: uid(), ...datos });
+    stamp(d || state.deudas[state.deudas.length - 1]);
+    guardarEstado(); cerrar(); toast(d ? 'Deuda actualizada' : 'Deuda creada'); render();
+  };
+}
+
+
+/* ============ Vista: Plan financiero ============ */
+function planConfig() { return state.plan; }
+
+function gastoMensualReferencia() {
+  const p = +state.plan.gastoMensual || 0;
+  if (p > 0) return p;
+  const meses = [0, 1, 2].map((i) => addMonths(currentMonthKey(), -i));
+  const vals = meses.map((mk) => totalGastado(mk)).filter((v) => v > 0);
+  if (vals.length) return vals.reduce((a, b) => a + b, 0) / vals.length;
+  return presupuestoTotalMes(currentMonthKey()) || 250;
+}
+
+function resumenPlan() {
+  const p = state.plan;
+  const ingresoMensual = +state.ajustes.ingreso || 0;
+  const paga = pagasConfig();
+  const numeroPagas = paga.activo ? Math.min(Math.max(+paga.numero || 2, 1), 2) : 0;
+  const pagasAnuales = paga.activo ? (+paga.importe || 0) * numeroPagas : 0;
+  const gastoMensual = gastoMensualReferencia();
+  const ingresoAnual = ingresoMensual * 12 + pagasAnuales;
+  const gastoAnual = gastoMensual * 12;
+  const ahorroAnual = ingresoAnual - gastoAnual;
+  const ahorroMensual = ingresoMensual - gastoMensual;
+  const tasaAhorro = ingresoAnual > 0 ? ahorroAnual / ingresoAnual : null;
+  const saldos = saldosActuales();
+  const mesesColchon = gastoMensual > 0 ? saldos.colchon / gastoMensual : null;
+  const fire = fireNumber(gastoAnual, p.tasaRetirada);
+  const aniosFire = aniosHastaFIRE({
+    patrimonio: saldos.total,
+    aportacionMensual: Math.max(0, ahorroMensual + pagasAnuales / 12),
+    rentabilidadAnualPct: p.rentabilidadCartera,
+    gastoAnual,
+    tasaRetiradaPct: p.tasaRetirada,
+  });
+  return {
+    p,
+    ingresoMensual,
+    pagasAnuales,
+    numeroPagas,
+    ingresoAnual,
+    gastoMensual,
+    gastoAnual,
+    ahorroMensual,
+    ahorroAnual,
+    tasaAhorro,
+    saldos,
+    patrimonio: saldos.total,
+    colchon: saldos.colchon,
+    mesesColchon,
+    fire,
+    aniosFire,
+    edadFire: aniosFire != null ? (+p.edadActual || 0) + aniosFire : null,
+    deudas: saldos.deudas,
+  };
+}
+
+function proyeccionPlan(anios = 30) {
+  const r = resumenPlan();
+  const p = r.p;
+  return proyeccionCompuesta({
+    capitalInicial: r.patrimonio,
+    aportacionMensual: Math.max(0, r.ahorroMensual),
+    aportacionAnual: Math.max(0, r.pagasAnuales),
+    rentabilidadAnualPct: p.rentabilidadCartera,
+    inflacionPct: p.inflacion,
+    anios,
+    crecimientoAportacionPct: p.crecimientoSalarial,
+    comisionAnualPct: p.comisionCartera,
+    impuestoGananciasPct: p.impuestoAhorro ? 0.19 : 0,
+  });
+}
+
+function comparativaPlanes(anios = 30) {
+  const r = resumenPlan();
+  const p = r.p;
+  const base = {
+    capitalInicial: r.patrimonio,
+    aportacionMensual: Math.max(0, r.ahorroMensual),
+    aportacionAnual: Math.max(0, r.pagasAnuales),
+    inflacionPct: p.inflacion,
+    anios,
+    crecimientoAportacionPct: p.crecimientoSalarial,
+    impuestoGananciasPct: p.impuestoAhorro ? 0.19 : 0,
+  };
+  const planes = [
+    { nombre: 'Solo cuenta remunerada', rentabilidad: p.rentabilidadCuenta, comision: 0, color: '#60a5fa' },
+    { nombre: 'Mixto 30 % cartera / 70 % cuenta', rentabilidad: 0.3 * p.rentabilidadCartera + 0.7 * p.rentabilidadCuenta, comision: 0.3 * p.comisionCartera, color: '#a78bfa' },
+    { nombre: '50 / 50', rentabilidad: 0.5 * p.rentabilidadCartera + 0.5 * p.rentabilidadCuenta, comision: 0.5 * p.comisionCartera, color: '#f5c451' },
+    { nombre: '100 % cartera indexada', rentabilidad: p.rentabilidadCartera, comision: p.comisionCartera, color: '#2eea8b' },
+  ];
+  return planes.map((x) => {
+    const serie = proyeccionCompuesta({ ...base, rentabilidadAnualPct: x.rentabilidad, comisionAnualPct: x.comision });
+    const ultimo = serie[serie.length - 1] || { nominal: r.patrimonio, real: r.patrimonio, neto: r.patrimonio };
+    return { ...x, serie, final: ultimo.nominal, real: ultimo.real, neto: ultimo.neto };
+  });
+}
+
+function casaResumen() {
+  const p = state.plan;
+  const h = p.hipoteca;
+  const oc = state.ajustes.objetivoCasa || {};
+  const v = datosVivienda();
+  const ingresoMensual = (+state.ajustes.ingreso || 0) + (+h.ingresoPareja || 0);
+  const cuotaMax = ingresoMensual * 0.35;
+  const i = (+h.tipo || 0) / 100 / 12;
+  const n = Math.max(1, Math.round((+h.plazo || 30) * 12));
+  const capitalMax = i > 0 ? cuotaMax * (1 - Math.pow(1 + i, -n)) / i : cuotaMax * n;
+  const precio = +oc.precio || +h.precio || 0;
+  const entrada = oc.pctEntrada != null ? +oc.pctEntrada : (+h.entrada || 20);
+  const gastos = oc.pctGastos != null ? +oc.pctGastos : (+h.gastos || 11);
+  const fecha = oc.fechaObjetivo || h.fecha || null;
+  const precioMaxHipoteca = capitalMax / Math.max(0.01, 1 - entrada / 100);
+  const saldos = saldosActuales();
+  const efectivoBruto = saldos.vivienda + saldos.colchon + (+h.ahorroPareja || 0);
+  const efectivo = Math.max(0, efectivoBruto - (+h.colchon || 0));
+  const precioMaxEfectivo = efectivo / Math.max(0.01, (entrada + gastos) / 100);
+  const precioMax = Math.min(precioMaxHipoteca, precioMaxEfectivo);
+  const hipoteca = precio * Math.max(0, 1 - entrada / 100);
+  const cuota = cuotaHipoteca(hipoteca, h.tipo, h.plazo);
+  const dti = ingresoMensual > 0 ? cuota / ingresoMensual : null;
+  const cashNeeded = precio * ((entrada + gastos) / 100);
+  const faltan = Math.max(0, cashNeeded - efectivo);
+  const meses = (v.aporteMes || 0) > 0 ? faltan / v.aporteMes : null;
+  const llegada = meses != null ? addMonths(currentMonthKey(), Math.ceil(meses)) : null;
+  const stressCuota = cuotaHipoteca(hipoteca, (+h.tipo || 0) + 2, h.plazo);
+  const stressDti = ingresoMensual > 0 ? stressCuota / ingresoMensual : null;
+  const intereses = interesesHipoteca(hipoteca, h.tipo, h.plazo);
+  const totalPagado = cuota * Math.max(1, Math.round((+h.plazo || 30) * 12)) + cashNeeded;
+  const alquiler = Math.max(0, +h.alquiler || 0);
+  const diferenciaAlquiler = cuota - alquiler;
+  const mesesHastaFecha = fecha ? Math.max(monthsBetween(currentMonthKey(), fecha), 0) : null;
+  const proyectado = mesesHastaFecha != null
+    ? saldos.vivienda + Math.max(0, saldos.colchon - (+h.colchon || 0)) + (+h.ahorroPareja || 0) + v.aporteMes * mesesHastaFecha
+    : null;
+  const onTrack = proyectado != null ? proyectado >= cashNeeded : efectivo >= cashNeeded;
+  return {
+    p, h, v, ingresoMensual, cuotaMax, capitalMax, precioMaxHipoteca, precioMaxEfectivo,
+    efectivo, efectivoBruto, precioMax, precio, entrada, gastos, hipoteca, cuota, dti, cashNeeded, faltan, meses, llegada,
+    stressCuota, stressDti, intereses, totalPagado, alquiler, diferenciaAlquiler, onTrack, proyectado, mesesHastaFecha, fecha,
+  };
+}
+
+function impuestosResumen() {
+  const p = state.plan;
+  const r = resumenPlan();
+  const proy = proyeccionPlan(30);
+  const ultimo = proy[proy.length - 1] || { ganancias: 0, nominal: 0 };
+  const impuestoPlusvalias = irpfAhorro(ultimo.ganancias);
+  const interesesCuenta = Math.max(0, r.saldos.efectivo) * (p.rentabilidadCuenta / 100);
+  const impuestoIntereses = irpfAhorro(interesesCuenta);
+  return {
+    proy, ultimo, impuestoPlusvalias, interesesCuenta, impuestoIntereses,
+    netoPlusvalias: Math.max(0, ultimo.ganancias - impuestoPlusvalias),
+    netoIntereses: Math.max(0, interesesCuenta - impuestoIntereses),
+  };
+}
+
+function reconciliarCuentasAuto() {
+  for (const h of holdingsActivos()) {
+    if (!h.autoNomina) continue;
+    const actual = saldoCuenta(h.id);
+    h.saldoBase = actual;
+    h.fechaBase = hoyISO();
+    stamp(h);
+  }
+}
+
+function vistaPlan(view) {
+  view.classList.add('view-plan');
+  const r = resumenPlan();
+  const p = r.p;
+  const proy = proyeccionPlan(30);
+  const planes = comparativaPlanes(30);
+  const casa = casaResumen();
+  const imp = impuestosResumen();
+  const primas = (state.seguros || []).reduce((a, x) => a + (+x.primaAnual || 0), 0);
+  const aniosJub = Math.max(0, (+p.edadJubilacion || 67) - (+p.edadActual || 22));
+  const proyJub = proyeccionPlan(aniosJub);
+  const capitalJub = proyJub.length ? proyJub[proyJub.length - 1].nominal : r.patrimonio;
+  const capitalJubReal = proyJub.length ? proyJub[proyJub.length - 1].real : r.patrimonio;
+  const fireCubre = capitalJubReal >= r.fire;
+  const labels = proy.map((x) => `${x.anio}a`);
+  const chart = lineaChart(proy.map((x) => x.nominal), labels, { color: '#2eea8b' });
+  const filas = [1, 5, 10, 15, 20, 25, 30].map((a) => {
+    const x = proy[a - 1] || proy[proy.length - 1];
+    if (!x) return '';
+    return `<tr><td>${a} años</td><td>${eur0(x.aportado)}</td><td>${eur0(x.nominal)}</td><td>${eur0(x.real)}</td><td>${eur0(x.ganancias)}</td><td>${eur0(x.neto)}</td></tr>`;
+  }).join('');
+  const filasPlanes = planes.map((x) => `<tr>
+    <td><span class="plan-dot" style="background:${x.color}"></span>${escapeHtml(x.nombre)}</td>
+    <td>${eur0(x.final)}</td>
+    <td>${eur0(x.real)}</td>
+    <td>${eur0(x.neto)}</td>
+  </tr>`).join('');
+
+  const objetivoClases = state.plan.asignacionObjetivo || {};
+  const clasesActuales = distribucionClases();
+  const filasClases = clasesActuales.map((x) => {
+    const obj = +objetivoClases[x.clase] || 0;
+    const desvio = x.pct * 100 - obj;
+    return `<div class="money-row">
+      <div><div class="lbl">${escapeHtml(x.clase)}</div><div class="sub">Objetivo ${obj} % · real ${(x.pct * 100).toFixed(1).replace('.', ',')} %</div></div>
+      <div class="val ${Math.abs(desvio) > 5 ? 'pct-warn' : 'pct-good'}">${desvio > 0 ? '+' : ''}${desvio.toFixed(1).replace('.', ',')} pp</div>
+    </div>`;
+  }).join('') || '<div class="hint">Sin posiciones.</div>';
+
+  view.innerHTML = `
+    <div class="plan-page">
+      <header class="page-head">
+        <div><span class="eyebrow">Estrategia</span><h1>Plan financiero</h1><p class="page-sub">Tus supuestos, tu proyección y las decisiones importantes en un solo sitio.</p></div>
+        <div class="page-head-actions">
+          <button class="btn secondary small" id="plan-export-csv" type="button">${icono('descargar', 15)} CSV movimientos</button>
+          <button class="btn secondary small" id="plan-print" type="button">${icono('editar', 15)} Imprimir</button>
+        </div>
+      </header>
+
+      <div class="stat-grid plan-kpis">
+        <div class="stat"><div class="label">Tasa de ahorro</div><div class="value ${r.tasaAhorro != null && r.tasaAhorro >= 0.2 ? 'pct-good' : 'pct-bad'}">${fmtPct(r.tasaAhorro, { conSigno: false, decimales: 1 })}</div><div class="hint">${eur(r.ahorroAnual)}/año · ${eur(r.ahorroMensual)}/mes</div></div>
+        <div class="stat"><div class="label">Patrimonio neto</div><div class="value">${eur0(r.patrimonio)}</div><div class="hint">${r.deudas > 0 ? `Deudas ${eur0(r.deudas)}` : 'Sin deudas registradas'}</div></div>
+        <div class="stat"><div class="label">Colchón</div><div class="value ${r.mesesColchon != null && r.mesesColchon >= p.colchonMeses ? 'pct-good' : 'pct-bad'}">${r.mesesColchon == null ? '—' : r.mesesColchon.toFixed(1).replace('.', ',') + ' meses'}</div><div class="hint">${eur0(r.colchon)} · objetivo ${p.colchonMeses} meses</div></div>
+        <div class="stat"><div class="label">Número FIRE</div><div class="value">${eur0(r.fire)}</div><div class="hint">${r.aniosFire == null ? 'Sin fecha con estos supuestos' : `${r.aniosFire} años · edad ${r.edadFire}`}</div></div>
+      </div>
+
+      <section class="card">
+        <div class="card-head"><div><h2>Supuestos</h2><p>Lo que la app usa para proyectar. Cambia y todo se recalcula.</p></div></div>
+        <div class="form-grid">
+          <div class="field"><label for="pl-ingreso">Ingreso neto mensual (€)</label><input id="pl-ingreso" data-ajuste-ingreso type="text" inputmode="decimal" value="${String(r.ingresoMensual).replace('.', ',')}" /></div>
+          <div class="field"><label for="pl-gasto">Gasto mensual del plan (€)</label><input id="pl-gasto" data-plan="gastoMensual" type="text" inputmode="decimal" value="${String(p.gastoMensual || 0).replace('.', ',')}" /></div>
+          <div class="field"><label for="pl-crec">Crecimiento salarial (%/año)</label><input id="pl-crec" data-plan="crecimientoSalarial" type="text" inputmode="decimal" value="${String(p.crecimientoSalarial).replace('.', ',')}" /></div>
+          <div class="field"><label for="pl-infl">Inflación (%)</label><input id="pl-infl" data-plan="inflacion" type="text" inputmode="decimal" value="${String(p.inflacion).replace('.', ',')}" /></div>
+          <div class="field"><label for="pl-rc">Rentabilidad cartera (%)</label><input id="pl-rc" data-plan="rentabilidadCartera" type="text" inputmode="decimal" value="${String(p.rentabilidadCartera).replace('.', ',')}" /></div>
+          <div class="field"><label for="pl-rcta">Rentabilidad cuenta (%)</label><input id="pl-rcta" data-plan="rentabilidadCuenta" type="text" inputmode="decimal" value="${String(p.rentabilidadCuenta).replace('.', ',')}" /></div>
+          <div class="field"><label for="pl-com">Comisión cartera (%/año)</label><input id="pl-com" data-plan="comisionCartera" type="text" inputmode="decimal" value="${String(p.comisionCartera).replace('.', ',')}" /></div>
+          <div class="field"><label for="pl-edad">Edad actual</label><input id="pl-edad" data-plan="edadActual" type="number" min="0" max="100" value="${p.edadActual}" /></div>
+          <div class="field"><label for="pl-jub">Edad de jubilación</label><input id="pl-jub" data-plan="edadJubilacion" type="number" min="0" max="100" value="${p.edadJubilacion}" /></div>
+          <div class="field"><label for="pl-tasa">Tasa de retirada (%)</label><input id="pl-tasa" data-plan="tasaRetirada" type="text" inputmode="decimal" value="${String(p.tasaRetirada).replace('.', ',')}" /></div>
+          <div class="field"><label for="pl-colchon">Colchón objetivo (meses)</label><input id="pl-colchon" data-plan="colchonMeses" type="number" min="0" max="36" value="${p.colchonMeses}" /></div>
+        </div>
+        <div class="card-head" style="margin-top:16px"><div><h2>Asignación objetivo</h2><p>Porcentaje de los activos que quieres en cada clase</p></div></div>
+        <div class="form-grid form-grid-4">
+          ${[['efectivo', 'Efectivo'], ['rentaVariable', 'Renta variable'], ['rentaFija', 'Renta fija'], ['cripto', 'Cripto']].map(([k, t]) => `<div class="field"><label>${t} (%)</label><input data-alloc="${k}" type="text" inputmode="decimal" value="${String(objetivoClases[k] || 0).replace('.', ',')}" /></div>`).join('')}
+        </div>
+        <div class="plan-classes">${filasClases}</div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><div><h2>Proyección a 30 años</h2><p>Capital inicial ${eur0(r.patrimonio)} · aportación ${eur0(r.ahorroMensual)}/mes · pagas ${eur0(r.pagasAnuales)}/año</p></div></div>
+        <div class="chart-wrap">${chart}</div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Horizonte</th><th>Aportado</th><th>Nominal</th><th>Euros de hoy</th><th>Ganancias</th><th>Neto tras impuestos</th></tr></thead>
+            <tbody>${filas}</tbody>
+          </table>
+        </div>
+        <p class="hint">Modelo con rentabilidad constante, comisión anual, inflación y una aproximación fiscal del 19 % sobre ganancias. La realidad será irregular; no es una promesa.</p>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><div><h2>Comparador de planes</h2><p>Mismo esfuerzo de ahorro, distinta asignación</p></div></div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Plan</th><th>Final nominal</th><th>Euros de hoy</th><th>Neto tras impuestos</th></tr></thead>
+            <tbody>${filasPlanes}</tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><div><h2>Casa y hipoteca</h2><p>Capacidad de compra, cuota, esfuerzo y estrés test</p></div></div>
+        <div class="form-grid">
+          <div class="field"><label>Precio de la vivienda (€)</label><input data-hip="precio" type="text" inputmode="decimal" value="${String(casa.precio || 0).replace('.', ',')}" /></div>
+          <div class="field"><label>Entrada (%)</label><input data-hip="entrada" type="text" inputmode="decimal" value="${String(casa.entrada || 20).replace('.', ',')}" /></div>
+          <div class="field"><label>Gastos de compra (%)</label><input data-hip="gastos" type="text" inputmode="decimal" value="${String(casa.gastos || 11).replace('.', ',')}" /></div>
+          <div class="field"><label>Tipo de hipoteca (%)</label><input data-hip="tipo" type="text" inputmode="decimal" value="${String(casa.h.tipo || 3.5).replace('.', ',')}" /></div>
+          <div class="field"><label>Plazo (años)</label><input data-hip="plazo" type="number" min="1" max="40" value="${casa.h.plazo || 30}" /></div>
+          <div class="field"><label>Ingreso neto pareja (€/mes)</label><input data-hip="ingresoPareja" type="text" inputmode="decimal" value="${String(casa.h.ingresoPareja || 0).replace('.', ',')}" /></div>
+          <div class="field"><label>Ahorro pareja para entrada (€)</label><input data-hip="ahorroPareja" type="text" inputmode="decimal" value="${String(casa.h.ahorroPareja || 0).replace('.', ',')}" /></div>
+          <div class="field"><label>Colchón que no tocas (€)</label><input data-hip="colchon" type="text" inputmode="decimal" value="${String(casa.h.colchon || 5000).replace('.', ',')}" /></div>
+          <div class="field"><label>Alquiler equivalente (€/mes)</label><input data-hip="alquiler" type="text" inputmode="decimal" value="${String(casa.h.alquiler || 0).replace('.', ',')}" /></div>
+        </div>
+        <div class="stat-grid two" style="margin-top:14px">
+          <div class="stat"><div class="label">Precio máximo estimado</div><div class="value">${eur0(casa.precioMax)}</div><div class="hint">Por hipoteca ${eur0(casa.precioMaxHipoteca)} · por efectivo ${eur0(casa.precioMaxEfectivo)}</div></div>
+          <div class="stat"><div class="label">Cuota hipotecaria</div><div class="value">${eur(casa.cuota)}</div><div class="hint">${casa.dti == null ? 'Sin ingresos' : fmtPct(casa.dti, { conSigno: false, decimales: 0 }) + ' de ingresos'} · estrés ${eur(casa.stressCuota)} (${casa.stressDti == null ? '—' : fmtPct(casa.stressDti, { conSigno: false, decimales: 0 })})</div></div>
+          <div class="stat"><div class="label">Efectivo necesario</div><div class="value">${eur0(casa.cashNeeded)}</div><div class="hint">Tienes ${eur0(casa.efectivo)} tras colchón (${eur0(casa.efectivoBruto)} bruto) · faltan ${eur0(casa.faltan)}</div></div>
+          <div class="stat"><div class="label">Intereses totales</div><div class="value">${eur0(casa.intereses)}</div><div class="hint">Coste total compra + hipoteca ${eur0(casa.totalPagado)}</div></div>
+          ${casa.alquiler > 0 ? `<div class="stat"><div class="label">Cuota vs alquiler</div><div class="value ${casa.diferenciaAlquiler <= 0 ? 'pct-good' : 'pct-warn'}">${casa.diferenciaAlquiler > 0 ? '+' : ''}${eur(casa.diferenciaAlquiler)}</div><div class="hint">Cuota ${eur(casa.cuota)} · alquiler ${eur(casa.alquiler)} · comparación simplificada (la compra genera patrimonio)</div></div>` : ''}
+          <div class="stat"><div class="label">Llegada estimada</div><div class="value ${casa.onTrack ? 'pct-good' : 'pct-warn'}">${casa.onTrack ? 'Cubierto' : casa.llegada ? fmtMes(casa.llegada) : 'Sin aporte'}</div><div class="hint">Aporte vivienda ${eur0(casa.v.aporteMes)}/mes · fecha ${casa.fecha ? fmtMes(casa.fecha) : 'sin fecha'}${casa.proyectado != null ? ` · proyectado ${eur0(casa.proyectado)}` : ''}</div></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><div><h2>Impuestos y comisiones</h2><p>Estimación orientativa de la fiscalidad del ahorro en España</p></div></div>
+        <div class="stat-grid two">
+          <div class="stat"><div class="label">Plusvalías latentes a 30 años</div><div class="value">${eur0(imp.ultimo.ganancias)}</div><div class="hint">IRPF estimado ${eur0(imp.impuestoPlusvalias)} · neto ${eur0(imp.netoPlusvalias)}</div></div>
+          <div class="stat"><div class="label">Intereses anuales de la cuenta</div><div class="value">${eur0(imp.interesesCuenta)}</div><div class="hint">IRPF estimado ${eur0(imp.impuestoIntereses)} · neto ${eur0(imp.netoIntereses)}</div></div>
+          <div class="stat"><div class="label">Comisión cartera</div><div class="value">${p.comisionCartera} %/año</div><div class="hint">Ya incluida en la proyección</div></div>
+          <div class="stat"><div class="label">Primas de seguros</div><div class="value">${eur0(primas)}/año</div><div class="hint">${(state.seguros || []).length} seguros registrados · ${eur0(primas / 12)}/mes</div></div>
+          <div class="stat"><div class="label">Fiscalidad aplicada</div><div class="value">${p.impuestoAhorro ? '19 % aprox.' : 'Sin impuestos'}</div><div class="hint">La proyección usa 19 % simplificado; el detalle aplica tramos 19 / 21 / 23 / 27 %.</div></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><div><h2>Jubilación / FIRE</h2><p>Con tu gasto actual y la tasa de retirada elegida</p></div></div>
+        <div class="stat-grid two">
+          <div class="stat"><div class="label">Número FIRE</div><div class="value">${eur0(r.fire)}</div><div class="hint">Gasto anual ${eur0(r.gastoAnual)} ÷ ${p.tasaRetirada} %</div></div>
+          <div class="stat"><div class="label">Años hasta FIRE</div><div class="value">${r.aniosFire == null ? '—' : r.aniosFire}</div><div class="hint">${r.edadFire == null ? 'Ajusta aportación o rentabilidad' : `Edad estimada ${r.edadFire}`}</div></div>
+          <div class="stat"><div class="label">Patrimonio actual</div><div class="value">${eur0(r.patrimonio)}</div><div class="hint">${fmtPct(r.fire > 0 ? r.patrimonio / r.fire : null, { conSigno: false, decimales: 1 })} del objetivo</div></div>
+          <div class="stat"><div class="label">Ahorro necesario</div><div class="value">${eur0(Math.max(0, r.ahorroMensual))}/mes</div><div class="hint">${r.ahorroMensual < 0 ? 'Déficit: recorta gasto o sube ingresos' : 'Aportación actual del plan'}</div></div>
+          <div class="stat"><div class="label">Capital a los ${p.edadJubilacion} años</div><div class="value ${fireCubre ? 'pct-good' : 'pct-warn'}">${eur0(capitalJub)}</div><div class="hint">${eur0(capitalJubReal)} en euros de hoy · ${fireCubre ? 'cubre el número FIRE' : 'no llega al número FIRE'}</div></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><div><h2>Informes</h2><p>Exporta tus datos para revisarlos o llevarlos a otro sitio</p></div></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn secondary small" id="plan-export-csv-2" type="button">${icono('descargar', 15)} Exportar movimientos CSV</button>
+          <button class="btn secondary small" id="plan-print-2" type="button">${icono('editar', 15)} Imprimir plan</button>
+        </div>
+      </section>
+
+      <p class="hint" style="text-align:center;margin-top:18px">Cifras orientativas, no asesoramiento financiero personalizado. Revisa los supuestos cada año.</p>
+    </div>
+  `;
+
+  const guardarPlan = (clave, valor) => {
+    state.plan[clave] = valor;
+    state.plan.mod = Date.now();
+    guardarEstado();
+    render();
+  };
+  view.querySelectorAll('[data-plan]').forEach((el) => {
+    el.addEventListener('change', () => {
+      const clave = el.dataset.plan;
+      const valor = parseAmount(el.value);
+      if (valor == null) return toast('Valor no válido', 'error');
+      guardarPlan(clave, valor);
+    });
+  });
+  view.querySelectorAll('[data-alloc]').forEach((el) => {
+    el.addEventListener('change', () => {
+      const clave = el.dataset.alloc;
+      const valor = parseAmount(el.value);
+      if (valor == null) return toast('Valor no válido', 'error');
+      state.plan.asignacionObjetivo[clave] = Math.max(0, Math.min(100, valor));
+      state.plan.mod = Date.now();
+      guardarEstado(); render();
+    });
+  });
+  view.querySelectorAll('[data-hip]').forEach((el) => {
+    el.addEventListener('change', () => {
+      const clave = el.dataset.hip;
+      const valor = parseAmount(el.value);
+      if (valor == null) return toast('Valor no válido', 'error');
+      state.plan.hipoteca[clave] = Math.max(0, valor);
+      if (clave === 'precio') state.ajustes.objetivoCasa.precio = Math.max(0, valor);
+      if (clave === 'entrada') state.ajustes.objetivoCasa.pctEntrada = Math.min(100, Math.max(0, valor));
+      if (clave === 'gastos') state.ajustes.objetivoCasa.pctGastos = Math.min(100, Math.max(0, valor));
+      state.plan.mod = Date.now();
+      state.ajustes.mod = Date.now();
+      guardarEstado(); render();
+    });
+  });
+  const ingreso = $('#pl-ingreso');
+  if (ingreso) ingreso.addEventListener('change', () => {
+    const valor = parseAmount(ingreso.value);
+    if (valor == null) return toast('Valor no válido', 'error');
+    state.ajustes.ingreso = valor;
+    state.ajustes.mod = Date.now();
+    reconciliarCuentasAuto();
+    guardarEstado(); render();
+  });
+  const exportar = () => descargarCSVMovimientos();
+  ['#plan-export-csv', '#plan-export-csv-2'].forEach((sel) => { const b = $(sel); if (b) b.onclick = exportar; });
+  ['#plan-print', '#plan-print-2'].forEach((sel) => { const b = $(sel); if (b) b.onclick = () => window.print(); });
+}
+
+/* ============ Informes y exportación ============ */
+function descargarArchivo(nombre, contenido, tipo = 'text/plain;charset=utf-8') {
+  const blob = new Blob([contenido], { type: tipo });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nombre;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function csvCelda(v) {
+  const s = String(v == null ? '' : v).replace(/"/g, '""');
+  return `"${s}"`;
+}
+
+function descargarCSVMovimientos() {
+  const filas = [['fecha', 'tipo', 'categoria', 'cuenta', 'importe', 'nota']];
+  const todos = [
+    ...(state.gastos || []).map((g) => ({ fecha: g.fecha, tipo: 'gasto', catId: g.catId, cuentaId: g.cuentaId, importe: g.monto, nota: g.nota })),
+    ...(state.movimientos || []).map((m) => ({ fecha: m.fecha, tipo: m.tipo, catId: m.catId, cuentaId: m.cuentaId, importe: m.importe, nota: m.nota })),
+  ].sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+  for (const x of todos) {
+    const cat = catPorId(x.catId);
+    const cuenta = holdingPorId(x.cuentaId);
+    filas.push([x.fecha, x.tipo, cat ? cat.nombre : '', cuenta ? cuenta.nombre : '', x.importe, x.nota || '']);
+  }
+  const csv = filas.map((f) => f.map(csvCelda).join(';')).join('\n');
+  descargarArchivo(`finanzas-movimientos-${hoyISO()}.csv`, '\ufeff' + csv, 'text/csv;charset=utf-8');
+  toast('CSV de movimientos descargado');
+}
+
+function descargarResumenCSV() {
+  const filas = [['mes', 'ingresos', 'gastos', 'ahorro', 'tasa_ahorro', 'patrimonio']];
+  const meses = [];
+  for (let i = 11; i >= 0; i--) meses.push(addMonths(currentMonthKey(), -i));
+  for (const mk of meses) {
+    const f = flujoMes(mk);
+    const snap = snapPorMes(mk);
+    const pat = snap ? Object.values(snap.valores || {}).reduce((a, b) => a + (+b || 0), 0) : '';
+    filas.push([mk, f.ingresos.total, f.gastos, f.ahorro, f.tasaAhorro == null ? '' : (f.tasaAhorro * 100).toFixed(1), pat]);
+  }
+  const csv = filas.map((f) => f.map(csvCelda).join(';')).join('\n');
+  descargarArchivo(`finanzas-resumen-${hoyISO()}.csv`, '\ufeff' + csv, 'text/csv;charset=utf-8');
+  toast('Resumen CSV descargado');
+}
+
+
+/* ============ Movimientos e importación ============ */
+function modalMovimiento(id = null) {
+  const m = id ? (state.movimientos || []).find((x) => x.id === id) : null;
+  const cuentas = holdingsActivos().filter(esCuentaEfectivo);
+  const inversiones = holdingsActivos().filter(esInversion);
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>${m ? 'Editar movimiento' : 'Nuevo movimiento'}</h3>
+      <div class="form-card">
+        <div class="field-row">
+          <div class="field"><label for="mov-tipo">Tipo</label>
+            <select id="mov-tipo">
+              ${[['ingreso', 'Ingreso'], ['traspaso', 'Traspaso entre cuentas'], ['inversion', 'Aportación a inversión'], ['retirada', 'Retirada de inversión'], ['pagoDeuda', 'Pago de deuda'], ['devolucion', 'Devolución / reembolso'], ['dividendo', 'Dividendo / cupón']].map(([v, t]) => `<option value="${v}" ${m && m.tipo === v ? 'selected' : ''}>${t}</option>`).join('')}
+            </select></div>
+          <div class="field"><label for="mov-fecha">Fecha</label>
+            <input id="mov-fecha" type="date" value="${m ? m.fecha : hoyISO()}" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="mov-importe">Importe (€)</label>
+            <input id="mov-importe" type="text" inputmode="decimal" value="${m ? String(m.importe).replace('.', ',') : ''}" placeholder="0,00" autofocus /></div>
+          <div class="field"><label for="mov-cuenta">Cuenta de origen / destino</label>
+            <select id="mov-cuenta">
+              ${cuentas.map((h) => `<option value="${h.id}" ${m && m.cuentaId === h.id ? 'selected' : ''}>${escapeHtml(h.nombre)}</option>`).join('')}
+            </select></div>
+        </div>
+        <div class="field" id="mov-destino-wrap"><label for="mov-destino">Cuenta destino (solo traspaso)</label>
+          <select id="mov-destino">
+            ${cuentas.map((h) => `<option value="${h.id}" ${m && m.cuentaDestinoId === h.id ? 'selected' : ''}>${escapeHtml(h.nombre)}</option>`).join('')}
+          </select></div>
+        <div class="field-row">
+          <div class="field" id="mov-cat-wrap"><label for="mov-cat">Categoría</label>
+            <select id="mov-cat">
+              <option value="__none">Sin categoría</option>
+              ${state.categorias.map((c) => `<option value="${c.id}" ${m && m.catId === c.id ? 'selected' : ''}>${escapeHtml(c.nombre)}</option>`).join('')}
+            </select></div>
+          <div class="field" id="mov-holding-wrap"><label for="mov-holding">Posición de inversión</label>
+            <select id="mov-holding">
+              ${inversiones.map((h) => `<option value="${h.id}" ${m && m.holdingId === h.id ? 'selected' : ''}>${escapeHtml(h.nombre)}</option>`).join('')}
+            </select></div>
+        </div>
+        <div class="field" id="mov-deuda-wrap"><label for="mov-deuda">Deuda</label>
+          <select id="mov-deuda">
+            ${(state.deudas || []).map((d) => `<option value="${d.id}" ${m && m.deudaId === d.id ? 'selected' : ''}>${escapeHtml(d.nombre)} · ${eur(d.saldo)}</option>`).join('')}
+          </select></div>
+        <div class="field"><label for="mov-nota">Nota</label>
+          <input id="mov-nota" type="text" value="${m ? escapeHtml(m.nota || '') : ''}" placeholder="Opcional" /></div>
+        <p class="hint">Los traspasos mueven dinero entre cuentas sin ser gasto. Las aportaciones a inversión salen de la cuenta y quedan registradas para calcular XIRR.</p>
+      </div>
+      <div class="modal-actions">
+        ${m ? '<button class="btn danger" id="mov-borrar" type="button">Borrar</button>' : ''}
+        <button class="btn secondary" id="mov-cancel" type="button">Cancelar</button>
+        <button class="btn" id="mov-save" type="button">${m ? 'Guardar' : 'Añadir'}</button>
+      </div>
+    </div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
+  const tipoSel = $('#mov-tipo', overlay);
+  const refrescar = () => {
+    const tipo = tipoSel.value;
+    $('#mov-destino-wrap', overlay).style.display = tipo === 'traspaso' ? '' : 'none';
+    $('#mov-holding-wrap', overlay).style.display = (tipo === 'inversion' || tipo === 'retirada' || tipo === 'dividendo') ? '' : 'none';
+    $('#mov-deuda-wrap', overlay).style.display = tipo === 'pagoDeuda' ? '' : 'none';
+    $('#mov-cat-wrap', overlay).style.display = (tipo === 'ingreso' || tipo === 'devolucion' || tipo === 'dividendo') ? '' : 'none';
+  };
+  tipoSel.onchange = refrescar;
+  refrescar();
+  $('#mov-cancel', overlay).onclick = cerrar;
+  $('#mov-save', overlay).onclick = () => {
+    const tipo = tipoSel.value;
+    const importe = parseAmount($('#mov-importe', overlay).value);
+    const fecha = $('#mov-fecha', overlay).value;
+    if (importe == null || importe <= 0) return toast('Importe inválido', 'error');
+    if (!fecha) return toast('Fecha inválida', 'error');
+    const datos = {
+      tipo,
+      importe,
+      fecha,
+      cuentaId: $('#mov-cuenta', overlay).value || 'h-ibercaja',
+      cuentaDestinoId: tipo === 'traspaso' ? $('#mov-destino', overlay).value : null,
+      catId: $('#mov-cat', overlay).value || '__none',
+      holdingId: (tipo === 'inversion' || tipo === 'retirada' || tipo === 'dividendo') ? $('#mov-holding', overlay).value : null,
+      deudaId: tipo === 'pagoDeuda' ? $('#mov-deuda', overlay).value : null,
+      nota: $('#mov-nota', overlay).value.trim(),
+      unidadesMov: null,
+    };
+    if (tipo === 'traspaso' && (!datos.cuentaDestinoId || datos.cuentaDestinoId === datos.cuentaId)) return toast('Elige una cuenta destino distinta', 'error');
+    if ((tipo === 'inversion' || tipo === 'retirada' || tipo === 'dividendo') && !datos.holdingId) return toast('Elige una posición de inversión', 'error');
+    if (tipo === 'pagoDeuda' && !datos.deudaId) return toast('Elige una deuda', 'error');
+
+    if (m && m.tipo === 'pagoDeuda' && m.deudaId) {
+      const d0 = deudaPorId(m.deudaId);
+      if (d0) { d0.saldo = Math.round((+d0.saldo + (+m.importe || 0)) * 100) / 100; stamp(d0); }
+    }
+    if (m && m.holdingId && m.unidadesMov) {
+      const h0 = holdingPorId(m.holdingId);
+      if (h0) { h0.unidades = Math.max(0, (+h0.unidades || 0) - (+m.unidadesMov || 0)); stamp(h0); }
+    }
+    if (m) Object.assign(m, datos);
+    else state.movimientos.push({ id: uid(), ...datos });
+    const mov = m || state.movimientos[state.movimientos.length - 1];
+    if ((tipo === 'inversion' || tipo === 'retirada') && datos.holdingId) {
+      const h = holdingPorId(datos.holdingId);
+      if (h && +h.precio > 0) {
+        const um = importe / +h.precio;
+        mov.unidadesMov = tipo === 'inversion' ? um : -um;
+        h.unidades = Math.max(0, (+h.unidades || 0) + mov.unidadesMov);
+        stamp(h);
+      }
+    }
+    stamp(mov);
+    if (tipo === 'pagoDeuda' && datos.deudaId) {
+      const d = deudaPorId(datos.deudaId);
+      if (d) { d.saldo = Math.max(0, Math.round((+d.saldo - importe) * 100) / 100); stamp(d); }
+    }
+    guardarEstado(); cerrar(); toast(m ? 'Movimiento actualizado' : 'Movimiento añadido'); render();
+  };
+  if (m) $('#mov-borrar', overlay).onclick = () => {
+    if (!confirm('¿Borrar este movimiento?')) return;
+    if (m.tipo === 'pagoDeuda' && m.deudaId) {
+      const d = deudaPorId(m.deudaId);
+      if (d) { d.saldo = Math.round((+d.saldo + (+m.importe || 0)) * 100) / 100; stamp(d); }
+    }
+    if (m.holdingId && m.unidadesMov) {
+      const h = holdingPorId(m.holdingId);
+      if (h) { h.unidades = Math.max(0, (+h.unidades || 0) - (+m.unidadesMov || 0)); stamp(h); }
+    }
+    tumba('movimientos', m.id);
+    state.movimientos = state.movimientos.filter((x) => x.id !== m.id);
+    guardarEstado(); cerrar(); toast('Movimiento borrado'); render();
+  };
+}
+
+function parseCSV(texto) {
+  const lineas = String(texto || '').replace(/\r/g, '').split('\n').filter((l) => l.trim());
+  if (!lineas.length) return [];
+  const delim = (lineas[0].match(/;/g) || []).length >= (lineas[0].match(/,/g) || []).length ? ';' : ',';
+  const parseLinea = (linea) => {
+    const out = [];
+    let actual = '', comillas = false;
+    for (let i = 0; i < linea.length; i++) {
+      const c = linea[i];
+      if (c === '"') {
+        if (comillas && linea[i + 1] === '"') { actual += '"'; i++; }
+        else comillas = !comillas;
+      } else if (c === delim && !comillas) { out.push(actual); actual = ''; }
+      else actual += c;
+    }
+    out.push(actual);
+    return out.map((x) => x.trim());
+  };
+  const cab = parseLinea(lineas[0]).map((x) => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+  return lineas.slice(1).map((l) => {
+    const vals = parseLinea(l);
+    const obj = {};
+    cab.forEach((k, i) => { obj[k] = vals[i] != null ? vals[i] : ''; });
+    return obj;
+  });
+}
+
+function modalImportarCSV() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>Importar movimientos CSV</h3>
+      <p class="hint">Cabeceras admitidas: <strong>fecha</strong>, <strong>importe</strong>, <strong>concepto</strong> o <strong>nota</strong>, <strong>categoria</strong> (opcional), <strong>tipo</strong> (opcional: gasto/ingreso/traspaso/inversion/retirada), <strong>cuenta</strong> (opcional). Separador ; o ,.</p>
+      <div class="field"><label for="csv-file">Archivo CSV</label><input id="csv-file" type="file" accept=".csv,text/csv" /></div>
+      <div class="field"><label for="csv-cuenta">Cuenta por defecto</label>
+        <select id="csv-cuenta">${holdingsActivos().filter(esCuentaEfectivo).map((h) => `<option value="${h.id}">${escapeHtml(h.nombre)}</option>`).join('')}</select></div>
+      <p class="hint">Se ignorarán las filas sin fecha o importe válidos. Los gastos se añaden a Gastos; el resto a Movimientos.</p>
+      <div class="modal-actions">
+        <button class="btn secondary" id="csv-cancel" type="button">Cancelar</button>
+        <button class="btn" id="csv-save" type="button">Importar</button>
+      </div>
+    </div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
+  $('#csv-cancel', overlay).onclick = cerrar;
+  $('#csv-save', overlay).onclick = () => {
+    const file = $('#csv-file', overlay).files[0];
+    if (!file) return toast('Elige un archivo CSV', 'error');
+    const cuentaDef = $('#csv-cuenta', overlay).value || 'h-ibercaja';
+    const reader = new FileReader();
+    reader.onload = () => {
+      const filas = parseCSV(reader.result);
+      let importados = 0, omitidos = 0;
+      for (const f of filas) {
+        const fechaRaw = f.fecha || f.date || '';
+        const fecha = /^\d{4}-\d{2}-\d{2}$/.test(fechaRaw) ? fechaRaw : (() => {
+          const m = fechaRaw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+          return m ? `${m[3].length === 2 ? '20' + m[3] : m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : '';
+        })();
+        const importe = parseAmount(f.importe || f.amount || f.cantidad || '');
+        if (!fecha || importe == null || importe === 0) { omitidos++; continue; }
+        const tipoRaw = String(f.tipo || 'gasto').toLowerCase();
+        const tipo = ['ingreso', 'gasto', 'traspaso', 'inversion', 'retirada', 'pagoDeuda', 'devolucion', 'dividendo'].includes(tipoRaw) ? tipoRaw : 'gasto';
+        const catNombre = String(f.categoria || f.category || '').trim().toLowerCase();
+        const cat = state.categorias.find((c) => c.nombre.toLowerCase() === catNombre) || state.categorias[0];
+        const cuentaNombre = String(f.cuenta || f.account || '').trim().toLowerCase();
+        const cuenta = holdingsActivos().find((h) => (h.nombre || '').toLowerCase() === cuentaNombre || (h.entidad || '').toLowerCase() === cuentaNombre) || holdingPorId(cuentaDef) || holdingsActivos()[0];
+        const nota = String(f.concepto || f.nota || f.descripcion || '').trim();
+        const duplicado = state.gastos.some((g) => g.fecha === fecha && Math.abs(+g.monto - importe) < 0.005 && (g.nota || '') === nota);
+        if (duplicado) { omitidos++; continue; }
+        if (tipo === 'gasto') {
+          state.gastos.push(stamp({ id: uid(), monto: Math.abs(importe), fecha, catId: cat ? cat.id : '__none', nota, cuentaId: cuenta ? cuenta.id : cuentaDef, creado: Date.now() }));
+        } else {
+          state.movimientos.push(stamp({ id: uid(), tipo, importe: Math.abs(importe), fecha, catId: cat ? cat.id : '__none', nota, cuentaId: cuenta ? cuenta.id : cuentaDef, creado: Date.now() }));
+        }
+        importados++;
+      }
+      guardarEstado(); cerrar(); toast(`${importados} movimientos importados${omitidos ? ` · ${omitidos} omitidos` : ''}`); render();
+    };
+    reader.readAsText(file);
+  };
+}
+
+function modalRecurrente(id = null) {
+  const r = id ? (state.recurrentes || []).find((x) => x.id === id) : null;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>${r ? 'Editar recurrente' : 'Nuevo recurrente'}</h3>
+      <div class="form-card">
+        <div class="field"><label for="rec-nombre">Nombre</label><input id="rec-nombre" type="text" value="${r ? escapeHtml(r.nombre) : ''}" placeholder="Ej.: Alquiler, suscripción, nómina" /></div>
+        <div class="field-row">
+          <div class="field"><label for="rec-tipo">Tipo</label>
+            <select id="rec-tipo">${[['gasto', 'Gasto'], ['ingreso', 'Ingreso']].map(([v, t]) => `<option value="${v}" ${r && r.tipo === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+          <div class="field"><label for="rec-importe">Importe (€)</label><input id="rec-importe" type="text" inputmode="decimal" value="${r ? String(r.importe).replace('.', ',') : ''}" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="rec-frecuencia">Frecuencia</label>
+            <select id="rec-frecuencia"><option value="mensual" ${!r || r.frecuencia === 'mensual' ? 'selected' : ''}>Mensual</option><option value="anual" ${r && r.frecuencia === 'anual' ? 'selected' : ''}>Anual</option></select></div>
+          <div class="field"><label for="rec-dia">Día del mes</label><input id="rec-dia" type="number" min="1" max="31" value="${r ? r.dia : 1}" /></div>
+        </div>
+        <div class="field" id="rec-mes-wrap"><label for="rec-mes">Mes (solo anual)</label>
+          <select id="rec-mes">${MESES.map((m, i) => `<option value="${i + 1}" ${r && r.mes === i + 1 ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+        <div class="field-row">
+          <div class="field"><label for="rec-cuenta">Cuenta</label>
+            <select id="rec-cuenta">${holdingsActivos().filter(esCuentaEfectivo).map((h) => `<option value="${h.id}" ${r && r.cuentaId === h.id ? 'selected' : ''}>${escapeHtml(h.nombre)}</option>`).join('')}</select></div>
+          <div class="field"><label for="rec-cat">Categoría</label>
+            <select id="rec-cat"><option value="__none">Sin categoría</option>${state.categorias.map((c) => `<option value="${c.id}" ${r && r.catId === c.id ? 'selected' : ''}>${escapeHtml(c.nombre)}</option>`).join('')}</select></div>
+        </div>
+        <div class="field"><label><input type="checkbox" id="rec-activo" style="width:auto" ${!r || r.activo !== false ? 'checked' : ''} /> Activo</label></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="rec-cancel" type="button">Cancelar</button>
+        <button class="btn" id="rec-save" type="button">${r ? 'Guardar' : 'Crear'}</button>
+      </div>
+    </div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
+  const refrescar = () => { $('#rec-mes-wrap', overlay).style.display = $('#rec-frecuencia', overlay).value === 'anual' ? '' : 'none'; };
+  $('#rec-frecuencia', overlay).onchange = refrescar; refrescar();
+  $('#rec-cancel', overlay).onclick = cerrar;
+  $('#rec-save', overlay).onclick = () => {
+    const nombre = $('#rec-nombre', overlay).value.trim();
+    const importe = parseAmount($('#rec-importe', overlay).value);
+    if (!nombre) return toast('Ponle un nombre', 'error');
+    if (importe == null || importe <= 0) return toast('Importe inválido', 'error');
+    const datos = {
+      nombre, importe,
+      tipo: $('#rec-tipo', overlay).value,
+      frecuencia: $('#rec-frecuencia', overlay).value,
+      dia: Math.min(31, Math.max(1, parseInt($('#rec-dia', overlay).value, 10) || 1)),
+      mes: parseInt($('#rec-mes', overlay).value, 10) || 1,
+      cuentaId: $('#rec-cuenta', overlay).value,
+      catId: $('#rec-cat', overlay).value,
+      activo: $('#rec-activo', overlay).checked,
+    };
+    if (r) Object.assign(r, datos);
+    else state.recurrentes.push({ id: uid(), ...datos, ultimaAplicacion: null });
+    stamp(r || state.recurrentes[state.recurrentes.length - 1]);
+    guardarEstado(); cerrar(); toast(r ? 'Recurrente actualizado' : 'Recurrente creado'); render();
+  };
+}
+
+function aplicarRecurrente(r, mk) {
+  if (!r || r.activo === false) return 0;
+  if (r.ultimaAplicacion && String(r.ultimaAplicacion) >= String(mk)) return 0;
+  const [y, m] = mk.split('-').map(Number);
+  const ultimoDia = new Date(y, m, 0).getDate();
+  const dia = Math.min(r.dia || 1, ultimoDia);
+  const fecha = `${mk}-${String(dia).padStart(2, '0')}`;
+  if (String(fecha) > hoyISO()) return 0;
+  if (r.frecuencia === 'anual' && (+r.mes || 1) !== m) return 0;
+  const cat = catPorId(r.catId);
+  if (r.tipo === 'ingreso') {
+    state.movimientos.push(stamp({ id: uid(), tipo: 'ingreso', importe: r.importe, fecha, catId: r.catId, nota: r.nombre, cuentaId: r.cuentaId, recurrenteId: r.id, creado: Date.now() }));
+  } else {
+    state.gastos.push(stamp({ id: uid(), monto: r.importe, fecha, catId: cat ? cat.id : '__none', nota: r.nombre, cuentaId: r.cuentaId, recurrenteId: r.id, creado: Date.now() }));
+  }
+  r.ultimaAplicacion = mk;
+  stamp(r);
+  return 1;
+}
+
+function recurrentesPendientes() {
+  let n = 0;
+  for (const r of state.recurrentes || []) {
+    if (!r.activo) continue;
+    let mk = r.ultimaAplicacion ? addMonths(r.ultimaAplicacion, 1) : currentMonthKey();
+    for (let i = 0; i < 24 && String(mk) <= currentMonthKey(); i++) {
+      if (r.frecuencia === 'anual' && (+r.mes || 1) !== +mk.split('-')[1]) { mk = addMonths(mk, 1); continue; }
+      const [y, m] = mk.split('-').map(Number);
+      const dia = Math.min(r.dia || 1, new Date(y, m, 0).getDate());
+      if (`${mk}-${String(dia).padStart(2, '0')}` <= hoyISO()) n++;
+      mk = addMonths(mk, 1);
+    }
+  }
+  return n;
+}
+
+function aplicarRecurrentes() {
+  let n = 0;
+  for (const r of state.recurrentes || []) {
+    if (!r.activo) continue;
+    let mk = r.ultimaAplicacion ? addMonths(r.ultimaAplicacion, 1) : currentMonthKey();
+    for (let i = 0; i < 24 && String(mk) <= currentMonthKey(); i++) {
+      n += aplicarRecurrente(r, mk);
+      mk = addMonths(mk, 1);
+    }
+  }
+  if (n) { guardarEstado(); toast(`${n} movimientos recurrentes aplicados`); render(); }
+  else toast('No hay recurrentes pendientes');
+  return n;
+}
+
+function modalSeguro() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>Nuevo seguro</h3>
+      <div class="form-card">
+        <div class="field"><label for="seg-nombre">Nombre</label><input id="seg-nombre" type="text" placeholder="Ej.: Seguro de vida" /></div>
+        <div class="field-row">
+          <div class="field"><label for="seg-tipo">Tipo</label>
+            <select id="seg-tipo">${[['vida', 'Vida'], ['salud', 'Salud'], ['hogar', 'Hogar'], ['coche', 'Coche'], ['otro', 'Otro']].map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></div>
+          <div class="field"><label for="seg-aseguradora">Aseguradora</label><input id="seg-aseguradora" type="text" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="seg-prima">Prima anual (€)</label><input id="seg-prima" type="text" inputmode="decimal" placeholder="0,00" /></div>
+          <div class="field"><label for="seg-renov">Renovación</label><input id="seg-renov" type="date" /></div>
+        </div>
+        <div class="field"><label for="seg-cobertura">Cobertura / notas</label><input id="seg-cobertura" type="text" placeholder="Capital asegurado, condiciones…" /></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="seg-cancel" type="button">Cancelar</button>
+        <button class="btn" id="seg-save" type="button">Crear</button>
+      </div>
+    </div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
+  $('#seg-cancel', overlay).onclick = cerrar;
+  $('#seg-save', overlay).onclick = () => {
+    const nombre = $('#seg-nombre', overlay).value.trim();
+    if (!nombre) return toast('Ponle un nombre', 'error');
+    state.seguros.push(stamp({
+      id: uid(), nombre,
+      tipo: $('#seg-tipo', overlay).value,
+      aseguradora: $('#seg-aseguradora', overlay).value.trim(),
+      primaAnual: Math.max(0, parseAmount($('#seg-prima', overlay).value) ?? 0),
+      renovacion: $('#seg-renov', overlay).value || null,
+      cobertura: $('#seg-cobertura', overlay).value.trim(),
+      creado: Date.now(),
+    }));
+    guardarEstado(); cerrar(); toast('Seguro creado'); render();
+  };
+}
+
+async function hashPin(pin) {
+  const texto = `finanzas-personal:${pin}`;
+  if (crypto.subtle && crypto.subtle.digest) {
+    const bytes = new TextEncoder().encode(texto);
+    const hash = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  // Respaldo simple para navegadores sin WebCrypto
+  let h = 0;
+  for (let i = 0; i < texto.length; i++) h = ((h << 5) - h + texto.charCodeAt(i)) | 0;
+  return 'fallback-' + Math.abs(h);
+}
+
+function modalPin() {
+  const tiene = !!state.ajustes.pinHash;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>${tiene ? 'Cambiar PIN' : 'Configurar PIN'}</h3>
+      <div class="form-card">
+        ${tiene ? '<div class="field"><label for="pin-actual">PIN actual</label><input id="pin-actual" type="password" inputmode="numeric" maxlength="8" /></div>' : ''}
+        <div class="field"><label for="pin-nuevo">Nuevo PIN (4–8 dígitos)</label><input id="pin-nuevo" type="password" inputmode="numeric" maxlength="8" /></div>
+        <div class="field"><label for="pin-rep">Repite el PIN</label><input id="pin-rep" type="password" inputmode="numeric" maxlength="8" /></div>
+        <p class="hint">Se guarda hasheado en este dispositivo. Si lo olvidas, puedes borrar los datos del sitio desde el navegador, pero perderás la copia local.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="pin-cancel" type="button">Cancelar</button>
+        <button class="btn" id="pin-save" type="button">Guardar PIN</button>
+      </div>
+    </div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
+  $('#pin-cancel', overlay).onclick = cerrar;
+  $('#pin-save', overlay).onclick = async () => {
+    const actual = tiene ? $('#pin-actual', overlay).value : '';
+    const nuevo = $('#pin-nuevo', overlay).value.trim();
+    const rep = $('#pin-rep', overlay).value.trim();
+    if (tiene && await hashPin(actual) !== state.ajustes.pinHash) return toast('PIN actual incorrecto', 'error');
+    if (!/^\d{4,8}$/.test(nuevo)) return toast('El PIN debe tener 4–8 dígitos', 'error');
+    if (nuevo !== rep) return toast('Los PIN no coinciden', 'error');
+    state.ajustes.pinHash = await hashPin(nuevo);
+    state.ajustes.mod = Date.now();
+    guardarEstado(); cerrar(); toast('PIN guardado'); render();
+  };
+}
+
+function bloquearApp() {
+  if (document.querySelector('.pin-lock')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay pin-lock';
+  overlay.innerHTML = `
+    <div class="modal pin-modal">
+      <div class="pin-logo">🔒</div>
+      <h3>Finanzas Personal</h3>
+      <p class="hint">Introduce tu PIN para desbloquear</p>
+      <div class="field"><input id="pin-unlock" type="password" inputmode="numeric" maxlength="8" autofocus /></div>
+      <button class="btn full" id="pin-unlock-btn" type="button">Desbloquear</button>
+      <p class="hint" id="pin-error" style="color:var(--rose)"></p>
+    </div>`;
+  document.body.appendChild(overlay);
+  const intentar = async () => {
+    const pin = $('#pin-unlock', overlay).value.trim();
+    if (await hashPin(pin) === state.ajustes.pinHash) overlay.remove();
+    else { $('#pin-error', overlay).textContent = 'PIN incorrecto'; $('#pin-unlock', overlay).value = ''; }
+  };
+  $('#pin-unlock-btn', overlay).onclick = intentar;
+  $('#pin-unlock', overlay).addEventListener('keydown', (e) => { if (e.key === 'Enter') intentar(); });
+  setTimeout(() => { const el = $('#pin-unlock', overlay); if (el) el.focus(); }, 80);
+}
+
+function syncHeaders(extra = {}) {
+  const h = { ...extra };
+  if (state.ajustes.syncToken) h['X-Sync-Token'] = state.ajustes.syncToken;
+  return h;
+}
+
+async function modalVersiones() {
+  const url = syncUrl();
+  if (!url) return toast('Configura primero el servidor de sincronización', 'error');
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal"><h3>Versiones del servidor</h3><p class="hint">Cargando…</p><div class="modal-actions"><button class="btn secondary" id="ver-cerrar" type="button">Cerrar</button></div></div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
+  $('#ver-cerrar', overlay).onclick = cerrar;
+  try {
+    const res = await fetch(url + '/api/versions', { headers: syncHeaders(), cache: 'no-store' });
+    if (!res.ok) throw new Error('status');
+    const versiones = await res.json();
+    const lista = Array.isArray(versiones) && versiones.length
+      ? versiones.map((v) => `<div class="panel-item"><span style="flex:1">#${v.id}<span class="tiny" style="display:block">${new Date(v.ts).toLocaleString('es-ES')} · ${(v.bytes / 1024).toFixed(1)} KB</span></span><button class="btn secondary small" data-restore="${v.id}" type="button">Restaurar</button></div>`).join('')
+      : '<div class="hint">Todavía no hay versiones.</div>';
+    overlay.querySelector('.modal').innerHTML = `<h3>Versiones del servidor</h3><p class="hint">Restaurar copia esa versión como última. Después pulsa «Descargar de la nube» en Ajustes.</p><div style="max-height:50vh;overflow:auto">${lista}</div><div class="modal-actions"><button class="btn secondary" id="ver-cerrar2" type="button">Cerrar</button></div>`;
+    $('#ver-cerrar2', overlay).onclick = cerrar;
+    overlay.querySelectorAll('[data-restore]').forEach((b) => {
+      b.onclick = async () => {
+        if (!confirm(`¿Restaurar la versión #${b.dataset.restore}?`)) return;
+        try {
+          const r = await fetch(url + '/api/restore', { method: 'POST', headers: syncHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ id: +b.dataset.restore }) });
+          if (!r.ok) throw new Error('status');
+          toast('Versión restaurada en el servidor; descargando…');
+          await syncBajar();
+          cerrar();
+        } catch { toast('No se pudo restaurar la versión', 'error'); }
+      };
+    });
+  } catch {
+    overlay.querySelector('.modal').innerHTML = '<h3>Versiones del servidor</h3><p class="hint">No se pudo conectar con el servidor. Revisa la URL y el token.</p><div class="modal-actions"><button class="btn secondary" id="ver-cerrar3" type="button">Cerrar</button></div>';
+    $('#ver-cerrar3', overlay).onclick = cerrar;
+  }
+}
+
+const COLECCIONES = ['gastos', 'snapshots', 'categorias', 'holdings', 'cubos', 'personas', 'compartidosEventos', 'bizums', 'objetivos', 'deudas', 'movimientos', 'recurrentes', 'presupuestosHistorial', 'seguros'];
 
 /* Misma regla que el servidor casero: registro a registro gana el 'mod' más
    reciente; los borrados viajan como lápidas. Se usa con la nube de GitHub
@@ -2141,15 +3870,31 @@ function autoSyncActivo() {
 }
 
 function esBackupValido(o) {
-  return o && typeof o === 'object' && Array.isArray(o.categorias) && Array.isArray(o.holdings ?? []);
+  if (!o || typeof o !== 'object' || !Array.isArray(o.categorias) || !Array.isArray(o.holdings ?? [])) return false;
+  for (const col of COLECCIONES) {
+    if (o[col] != null && !Array.isArray(o[col])) return false;
+  }
+  return true;
 }
 
 /* Contenido sin datos propios del dispositivo (para no publicar en balde) */
 function contenidoSync() {
   let copia;
   try { copia = JSON.parse(JSON.stringify(state)); } catch (e) { return ''; }
-  if (copia.ajustes) { delete copia.ajustes.syncUrl; delete copia.ajustes.syncAuto; delete copia.ajustes.github; }
+  if (copia.ajustes) { delete copia.ajustes.syncUrl; delete copia.ajustes.syncAuto; delete copia.ajustes.syncToken; delete copia.ajustes.github; delete copia.ajustes.pinHash; }
   return JSON.stringify(copia);
+}
+
+function estadoSyncLocal() {
+  try { return JSON.parse(contenidoSync() || '{}'); } catch (e) { return {}; }
+}
+
+function sinConfigSync(o) {
+  try {
+    const c = JSON.parse(JSON.stringify(o || {}));
+    if (c.ajustes) { delete c.ajustes.syncUrl; delete c.ajustes.syncAuto; delete c.ajustes.syncToken; delete c.ajustes.github; delete c.ajustes.pinHash; }
+    return c;
+  } catch (e) { return {}; }
 }
 
 /* ---- Nube gratis: GitHub (JSON en un repo privado, la app en Pages) ---- */
@@ -2214,7 +3959,7 @@ async function ghGuardar(cfg, obj, intento = 0) {
   if ((res.status === 409 || res.status === 422) && intento < 3) {
     ghEstado.etag = null;
     const remoto = await ghLeer(cfg);
-    return ghGuardar(cfg, fusionarLocal(state, remoto || { v: 2 }), intento + 1);
+    return ghGuardar(cfg, fusionarLocal(estadoSyncLocal(), sinConfigSync(remoto) || { v: 2 }), intento + 1);
   }
   if (!res.ok) {
     const err = new Error('put ' + res.status);
@@ -2238,8 +3983,8 @@ async function syncGitHub(forzar = false) {
   const cfg = state.ajustes.github;
   try {
     const remoto = await ghLeer(cfg);
-    const fusionado = fusionarLocal(state, remoto || { v: 2 });
-    const mismoRemoto = remoto && JSON.stringify(fusionado) === JSON.stringify(remoto);
+    const fusionado = fusionarLocal(estadoSyncLocal(), sinConfigSync(remoto) || { v: 2 });
+    const mismoRemoto = remoto && JSON.stringify(fusionado) === JSON.stringify(sinConfigSync(remoto));
     if (ghEstado.existe === false || !mismoRemoto) {
       await ghGuardar(cfg, fusionado);
       adoptarSync(fusionado);
@@ -2298,7 +4043,7 @@ let subidoPrevio = null;
 let ultimoSyncOK = 0;
 
 function adoptarSync(rec) {
-  const mia = { syncUrl: state.ajustes.syncUrl, syncAuto: state.ajustes.syncAuto, github: state.ajustes.github };
+  const mia = { syncUrl: state.ajustes.syncUrl, syncAuto: state.ajustes.syncAuto, syncToken: state.ajustes.syncToken, github: state.ajustes.github, pinHash: state.ajustes.pinHash };
   const antes = contenidoSync();
   rec.ajustes = { ...(rec.ajustes || {}), ...mia };
   rec.eliminados = Array.isArray(rec.eliminados) ? rec.eliminados : [];
@@ -2336,7 +4081,7 @@ async function syncAhora(forzar = false) {
     const sinCambiosLocales = contenidoSync() === subidoPrevio && !forzar;
     if (sinCambiosLocales) {
       // ya subí esto: solo compruebo si el servidor tiene algo nuevo de otros dispositivos
-      const res = await fetch(url + '/api/state', { cache: 'no-store' });
+      const res = await fetch(url + '/api/state', { headers: syncHeaders(), cache: 'no-store' });
       if (!res.ok) throw new Error('status ' + res.status);
       const rec = await res.json();
       if (esBackupValido(rec) && rec.syncT && rec.syncT !== state.syncT) {
@@ -2346,8 +4091,8 @@ async function syncAhora(forzar = false) {
     } else {
       const res = await fetch(url + '/api/state', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(state),
+        headers: syncHeaders({ 'Content-Type': 'application/json' }),
+        body: contenidoSync(),
       });
       if (!res.ok) throw new Error('status ' + res.status);
       const fusionado = await res.json();
@@ -2357,8 +4102,9 @@ async function syncAhora(forzar = false) {
     }
     ultimoSyncOK = Date.now();
     actualizarEstadoSync();
-  } catch {
-    if (forzar) toast('No se pudo sincronizar (¿servidor activo?, ¿URL correcta?)', 'error');
+  } catch (e) {
+    const msg = e && e.status === 401 ? 'Token del servidor incorrecto (401)' : 'No se pudo sincronizar (¿servidor activo?, ¿URL correcta?)';
+    if (forzar) toast(msg, 'error');
   } finally {
     enSync = false;
     if (syncPendiente) { syncPendiente = false; syncProgramar(); }
@@ -2386,7 +4132,7 @@ async function syncBajar() {
   const url = syncUrl();
   if (!url) return toast('Configura antes la URL del servidor', 'error');
   try {
-    const res = await fetch(url + '/api/state', { cache: 'no-store' });
+    const res = await fetch(url + '/api/state', { headers: syncHeaders(), cache: 'no-store' });
     if (!res.ok) throw new Error('status ' + res.status);
     const texto = await res.text();
     if (!texto.trim() || texto.trim() === '{}') return toast('La nube está vacía', 'error');
@@ -2413,7 +4159,7 @@ function actualizarEstadoSync(extra = '') {
 }
 
 /* ============ Vista: Análisis ============ */
-const ANALISIS_DESCARTADOS = new Set();
+const ANALISIS_DESCARTADOS = new Set(state.analisisDescartados || []);
 
 function analisisPeriodoHasta(finMk, n) {
   const meses = [];
@@ -2421,14 +4167,15 @@ function analisisPeriodoHasta(finMk, n) {
   return meses.map((mk) => {
     const gastos = gastosDelMes(mk);
     const porCat = { __none: 0 };
-    for (const c of state.categorias) porCat[c.id] = 0;
+    const porCatPresu = {};
+    for (const c of state.categorias) { porCat[c.id] = 0; porCatPresu[c.id] = presupuestoCategoria(c.id, mk); }
     let total = 0;
     for (const g of gastos) {
       const id = state.categorias.some((c) => c.id === g.catId) ? g.catId : '__none';
       porCat[id] = (porCat[id] || 0) + g.monto;
       total += g.monto;
     }
-    return { mk, porCat, total, n: gastos.length };
+    return { mk, porCat, porCatPresu, presupuesto: presupuestoTotalMes(mk), total, n: gastos.length };
   });
 }
 
@@ -2437,48 +4184,6 @@ function esMesEnCursoIncompleto(mk) {
   const ahora = new Date();
   const ultimoDia = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0).getDate();
   return ahora.getDate() < ultimoDia;
-}
-
-function pctSeguro(actual, anterior) {
-  if (!(anterior > 0)) return null;
-  return (actual - anterior) / anterior;
-}
-
-function fmtEurDelta(n) {
-  if (n == null || !isFinite(n)) return '—';
-  if (Math.abs(n) < 0.005) return eur0(0);
-  return `${n > 0 ? '+' : '−'}${eur0(Math.abs(n))}`;
-}
-
-function claseTendencia(p) {
-  if (p == null || !isFinite(p) || Math.abs(p) < 0.02) return 'trend-neutral';
-  return p > 0 ? 'trend-up' : 'trend-down';
-}
-
-function redondear5(n) {
-  if (!isFinite(n)) return 0;
-  return Math.max(0, Math.round(n / 5) * 5);
-}
-
-function mediaYDesviacion(serie) {
-  const valores = serie.filter((n) => isFinite(n));
-  if (!valores.length) return { media: 0, sd: 0, cv: 0 };
-  const media = valores.reduce((a, b) => a + b, 0) / valores.length;
-  const varianza = valores.reduce((a, b) => a + (b - media) ** 2, 0) / valores.length;
-  const sd = Math.sqrt(varianza);
-  return { media, sd, cv: media > 0 ? sd / media : 0 };
-}
-
-function maxBonito(valor) {
-  if (!(valor > 0)) return 1;
-  const potencia = Math.pow(10, Math.floor(Math.log10(valor)));
-  const normalizado = valor / potencia;
-  const paso = [1, 2, 2.5, 5, 10].find((x) => normalizado <= x) || 10;
-  return paso * potencia;
-}
-
-function pluralMeses(n) {
-  return `${n} ${n === 1 ? 'mes' : 'meses'}`;
 }
 
 function construirAnalisis(nPedido) {
@@ -2497,22 +4202,23 @@ function construirAnalisis(nPedido) {
   const mesesBase = baseActual.filter((f) => f.n > 0);
   const mesesPreviosBase = basePrevia.filter((f) => f.n > 0);
 
-  const presu = presupuestoTotal();
+  const presu = presupuestoTotalMes(currentMonthKey());
   const totalPeriodo = filasActuales.reduce((a, f) => a + f.total, 0);
   const totalBase = baseActual.reduce((a, f) => a + f.total, 0);
   const totalPrevio = basePrevia.reduce((a, f) => a + f.total, 0);
   const media = mesesBase.length ? totalBase / mesesBase.length : 0;
   const mediaPrevia = mesesPreviosBase.length ? totalPrevio / mesesPreviosBase.length : 0;
   const masCaro = filasActuales.filter((f) => f.n > 0).sort((a, b) => b.total - a.total)[0] || null;
-  const mesesPorEncima = mesesBase.filter((f) => presu > 0 && f.total > presu + 0.005).length;
+  const mesesPorEncima = mesesBase.filter((f) => f.presupuesto > 0 && f.total > f.presupuesto + 0.005).length;
   const comparacionFiable = mesesBase.length >= 1 && mesesPreviosBase.length >= 1;
   const variacionPeriodo = comparacionFiable ? pctSeguro(media, mediaPrevia) : null;
   const variacionMedia = comparacionFiable ? pctSeguro(media, mediaPrevia) : null;
   const tendenciaFiable = mesesBase.length >= 3 && mesesPreviosBase.length >= 2 && baseActual.length >= 3;
 
   const cats = state.categorias.map((c) => {
-    const presupuesto = +c.presupuesto || 0;
+    const presupuesto = presupuestoCategoria(c.id, currentMonthKey());
     const serieBase = mesesBase.map((f) => f.porCat[c.id] || 0);
+    const seriePresu = mesesBase.map((f) => (f.porCatPresu && f.porCatPresu[c.id]) || 0);
     const serieBasePrevia = mesesPreviosBase.map((f) => f.porCat[c.id] || 0);
     const totalActual = serieBase.reduce((a, b) => a + b, 0);
     const totalPrevioCat = serieBasePrevia.reduce((a, b) => a + b, 0);
@@ -2524,15 +4230,16 @@ function construirAnalisis(nPedido) {
     const max = Math.max(...serieBase, 0);
     const min = Math.min(...serieBase, 0);
     const cv = mediaYDesviacion(serieBase).cv;
-    const mesesSobre = serieBase.filter((x) => presupuesto > 0 && x > presupuesto + 0.005).length;
+    const mesesSobre = serieBase.filter((x, i) => (seriePresu[i] || 0) > 0 && x > (seriePresu[i] || 0) + 0.005).length;
     const mesesConGasto = serieBase.filter((x) => x > 0).length;
     const mesesPrevioConGasto = serieBasePrevia.filter((x) => x > 0).length;
-    const excesoMedio = serieBase.reduce((a, x) => a + Math.max(x - presupuesto, 0), 0) / Math.max(1, serieBase.length);
+    const excesoMedio = serieBase.reduce((a, x, i) => a + Math.max(x - (seriePresu[i] || 0), 0), 0) / Math.max(1, serieBase.length);
 
     return {
       ...c,
       presupuesto,
       serieBase,
+      seriePresu,
       serieBasePrevia,
       totalActual,
       totalPrevio: totalPrevioCat,
@@ -2647,7 +4354,7 @@ function construirPropuestasPresupuesto(d) {
     const med = mediana(serie);
     const max = Math.max(...serie, 0);
     const cv = mediaYDesviacion(serie).cv;
-    const mesesSobre = serie.filter((x) => presupuesto > 0 && x > presupuesto + 0.005).length;
+    const mesesSobre = c.mesesSobre != null ? c.mesesSobre : serie.filter((x) => presupuesto > 0 && x > presupuesto + 0.005).length;
     const mesesConGasto = serie.filter((x) => x > 0).length;
 
     const confianza = numMeses >= 6 && mesesConGasto >= 3 && cv <= 0.35
@@ -3075,7 +4782,8 @@ function vistaAnalisis(view) {
     </div>`;
 
   const filasTabla = d.filasActuales.map((f) => {
-    const pct = d.presu > 0 ? f.total / d.presu : null;
+    const presuMes = +f.presupuesto || 0;
+    const pct = presuMes > 0 ? f.total / presuMes : null;
     const estado = f.n === 0
       ? '<span class="trend-neutral">sin datos</span>'
       : pct == null
@@ -3084,7 +4792,7 @@ function vistaAnalisis(view) {
     return `<tr>
       <td>${etiquetaMes(f.mk)}${f.incompleto ? ' *' : ''}</td>
       <td>${f.n ? eur0(f.total) : '—'}</td>
-      <td>${d.presu > 0 ? eur0(d.presu) : '—'}</td>
+      <td>${presuMes > 0 ? eur0(presuMes) : '—'}</td>
       <td>${estado}</td>
     </tr>`;
   }).join('');
@@ -3182,7 +4890,7 @@ function vistaAnalisis(view) {
 
   const totalPropuestas = propuestas.propuestas.length
     ? `<div class="budget-total">
-        <div><span>Si aceptas todas</span><strong>${eur0(propuestas.totalNuevo)}/mes</strong></div>
+        <div><span>Si aceptas las visibles</span><strong>${eur0(propuestas.totalNuevo)}/mes</strong></div>
         <span class="pill ${propuestas.totalDelta > 0 ? 'pct-warn' : 'pct-good'}">${fmtEurDelta(propuestas.totalDelta)}/mes</span>
       </div>`
     : '';
@@ -3261,7 +4969,7 @@ function vistaAnalisis(view) {
         </div>
         <div class="plan-hero">
           <span class="plan-ico">${icono(plan.icono || 'objetivo', 17)}</span>
-          <div><strong>${escapeHtml(plan.titulo)}</strong><p>${plan.texto}</p></div>
+          <div><strong>${escapeHtml(plan.titulo)}</strong><p>${escapeHtml(plan.texto)}</p></div>
         </div>
         <div class="plan-savings">
           <div><span>Ahorro potencial estimado</span><strong>${ahorroTxt}</strong></div>
@@ -3284,8 +4992,10 @@ function vistaAnalisis(view) {
       const valor = parseAmount(b.dataset.presupuestoValor);
       if (!c || valor == null) return;
       c.presupuesto = valor;
+      registrarPresupuesto(c.id, valor, currentMonthKey());
       stamp(c);
       ANALISIS_DESCARTADOS.delete(b.dataset.key);
+      state.analisisDescartados = [...ANALISIS_DESCARTADOS];
       guardarEstado();
       toast(`Presupuesto de ${c.nombre} actualizado a ${eur0(valor)}`);
       render();
@@ -3295,6 +5005,8 @@ function vistaAnalisis(view) {
   view.querySelectorAll('[data-presupuesto-rechazar]').forEach((b) => {
     b.onclick = () => {
       ANALISIS_DESCARTADOS.add(b.dataset.key);
+      state.analisisDescartados = [...ANALISIS_DESCARTADOS];
+      guardarEstado(state, true);
       toast('Propuesta descartada');
       render();
     };
@@ -3332,7 +5044,7 @@ function modalDetalleCategoriaAnalisis(id) {
   if (!c) return;
   const filas = d.baseActual.map((f) => {
     const gasto = f.porCat[c.id] || 0;
-    const p = c.presupuesto;
+    const p = (f.porCatPresu && f.porCatPresu[c.id]) || 0;
     const diff = f.n > 0 && p > 0 ? gasto - p : null;
     return `<tr>
       <td>${etiquetaMes(f.mk)}${f.incompleto ? ' *' : ''}</td>
@@ -3363,7 +5075,7 @@ function modalDetalleCategoriaAnalisis(id) {
 function modalDetalleMesAnalisis(mk) {
   const gastos = gastosDelMes(mk).slice().sort((a, b) => b.monto - a.monto);
   const total = gastos.reduce((a, g) => a + g.monto, 0);
-  const presu = presupuestoTotal();
+  const presu = presupuestoTotalMes(currentMonthKey());
   const lista = gastos.length
     ? gastos.slice(0, 12).map((g) => {
       const c = catPorId(g.catId);
@@ -3390,11 +5102,12 @@ function modalDetalleMesAnalisis(mk) {
 function modalDetallePeriodoAnalisis() {
   const d = construirAnalisis(ui.analisisMeses || 6);
   const filas = d.baseActual.map((f) => {
-    const pct = d.presu > 0 ? f.total / d.presu : null;
+    const presuMes = +f.presupuesto || 0;
+    const pct = presuMes > 0 ? f.total / presuMes : null;
     return `<tr>
       <td>${etiquetaMes(f.mk)}${f.incompleto ? ' *' : ''}</td>
       <td>${f.n ? eur0(f.total) : '—'}</td>
-      <td>${d.presu > 0 ? eur0(d.presu) : '—'}</td>
+      <td>${presuMes > 0 ? eur0(presuMes) : '—'}</td>
       <td class="${pct == null ? '' : pct > 1 ? 'pct-bad' : pct > 0.7 ? 'pct-warn' : 'pct-good'}">${pct == null ? '—' : fmtPct(pct, { conSigno: false, decimales: 0 })}</td>
     </tr>`;
   }).join('');
@@ -3621,6 +5334,10 @@ function modalEventoCompartido() {
             <option value="yo">Yo</option>
             ${personasLista().map((p) => `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`).join('')}
           </select></div>
+        <div class="field"><label for="ev-cuenta">Cuenta de la que sale / saldrá el dinero</label>
+          <select id="ev-cuenta">
+            ${holdingsActivos().filter(esCuentaEfectivo).map((h) => `<option value="${h.id}">${escapeHtml(h.nombre)}</option>`).join('')}
+          </select></div>
         <div class="field"><label>Participantes</label>
           <div id="ev-parts">
             ${[
@@ -3705,12 +5422,14 @@ function modalEventoCompartido() {
     if (participantes.length === 1 && participantes[0].id === 'yo') {
       return toast('Marca a alguien más o registra el gasto normal en Gastos', 'error');
     }
+    const cuentaId = $('#ev-cuenta', overlay).value || 'h-ibercaja';
     const ev = stamp({
       id: uid(),
       fecha,
       descripcion,
       importe: Math.round(importe * 100) / 100,
       pagador,
+      cuentaId,
       participantes,
       gastoId: null,
       creado: Date.now(),
@@ -3722,6 +5441,7 @@ function modalEventoCompartido() {
         monto: miParte.importe,
         fecha,
         catId: $('#ev-cat', overlay).value,
+        cuentaId,
         nota: `${descripcion} (compartido)`,
         creado: Date.now(),
       });
@@ -3749,6 +5469,10 @@ function modalBizum() {
         <div class="field"><label for="bz-persona">Persona</label>
           <select id="bz-persona">
             ${personasLista().map((p) => `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`).join('')}
+          </select></div>
+        <div class="field"><label for="bz-cuenta">Cuenta</label>
+          <select id="bz-cuenta">
+            ${holdingsActivos().filter(esCuentaEfectivo).map((h) => `<option value="${h.id}">${escapeHtml(h.nombre)}</option>`).join('')}
           </select></div>
         <div class="field-row" style="margin-bottom:12px">
           <div class="field"><label for="bz-dir">Dirección</label>
@@ -3782,7 +5506,7 @@ function modalBizum() {
     if (!fecha) return toast('Fecha inválida', 'error');
     const signo = $('#bz-dir', overlay).value === 'recibo' ? 1 : -1;
     state.bizums = state.bizums || [];
-    state.bizums.push(stamp({ id: uid(), personaId, importe: signo * Math.round(importe * 100) / 100, fecha, nota: $('#bz-nota', overlay).value.trim(), creado: Date.now() }));
+    state.bizums.push(stamp({ id: uid(), personaId, importe: signo * Math.round(importe * 100) / 100, fecha, cuentaId: $('#bz-cuenta', overlay).value || 'h-ibercaja', nota: $('#bz-nota', overlay).value.trim(), creado: Date.now() }));
     guardarEstado(); cerrar(); toast('Bizum registrado'); render();
   };
 }
@@ -3794,23 +5518,50 @@ function vistaAjustes(view) {
       <span class="dot" style="width:12px;height:12px;border-radius:50%;background:${c.color};flex:none"></span>
       <input type="text" data-cnombre="${c.id}" value="${escapeHtml(c.nombre)}" aria-label="Nombre de categoría" />
       <input type="text" class="w-budget" inputmode="decimal" data-cpres="${c.id}" value="${String(c.presupuesto || 0).replace('.', ',')}" aria-label="Presupuesto" />
+      <select data-ctipo="${c.id}" aria-label="Tipo de gasto" style="max-width:110px">
+        ${[['fijo', 'Fijo'], ['variable', 'Variable'], ['irregular', 'Irregular']].map(([v, t]) => `<option value="${v}" ${(c.tipo || 'variable') === v ? 'selected' : ''}>${t}</option>`).join('')}
+      </select>
       <button class="icon-btn danger" data-cdel="${c.id}" type="button" aria-label="Eliminar categoría">🗑</button>
     </div>`).join('');
 
-  const portaleras = state.holdings.map((h) => `
+  const portaleras = holdingsActivos().map((h) => `
     <div class="panel-item">
       <input type="text" data-hnombre="${h.id}" value="${escapeHtml(h.nombre)}" aria-label="Nombre de posición" />
       <select data-hcubo="${h.id}" aria-label="Espacio al que pertenece">
         ${state.cubos.map((cb) => `<option value="${cb.id}" ${cb.id === h.cubo ? 'selected' : ''}>${escapeHtml(cb.nombre)}</option>`).join('')}
       </select>
       <input type="text" class="w-budget" inputmode="decimal" data-hplan="${h.id}" value="${String(h.plan || 0).replace('.', ',')}" aria-label="Aportación plan" />
-      <button class="icon-btn danger" data-hdel="${h.id}" type="button" aria-label="Eliminar posición">🗑</button>
+      <button class="icon-btn" data-hedit="${h.id}" type="button" aria-label="Editar posición">✏️</button>
+      <button class="icon-btn danger" data-hdel="${h.id}" type="button" aria-label="Archivar posición">📦</button>
     </div>`).join('');
+
+  const archivadas = state.holdings.filter((h) => h.archivada).map((h) => `
+    <div class="panel-item">
+      <span style="flex:1">${escapeHtml(h.nombre)}<span class="tiny" style="display:block">Archivada · ${escapeHtml(h.entidad || '')}</span></span>
+      <button class="btn secondary small" data-hrestore="${h.id}" type="button">Restaurar</button>
+    </div>`).join('');
+
+  const recurrentes = (state.recurrentes || []).length
+    ? state.recurrentes.map((r) => `<div class="panel-item">
+        <span class="dot" style="width:10px;height:10px;border-radius:50%;background:${r.tipo === 'ingreso' ? 'var(--accent)' : 'var(--rose)'};flex:none"></span>
+        <span style="flex:1">${escapeHtml(r.nombre)}<span class="tiny" style="display:block">${r.tipo === 'ingreso' ? 'Ingreso' : 'Gasto'} · ${r.frecuencia} · día ${r.dia} · ${eur(r.importe)}</span></span>
+        <button class="icon-btn" data-recedit="${r.id}" type="button" aria-label="Editar recurrente">✏️</button>
+        <button class="icon-btn danger" data-recdel="${r.id}" type="button" aria-label="Eliminar recurrente">🗑</button>
+      </div>`).join('')
+    : '<div class="hint">Sin gastos ni ingresos recurrentes. Añade alquiler, suscripciones o nómina.</div>';
+
+  const seguros = (state.seguros || []).length
+    ? state.seguros.map((x) => `<div class="panel-item">
+        <span style="flex:1">${escapeHtml(x.nombre)}<span class="tiny" style="display:block">${escapeHtml(x.tipo || 'Seguro')}${x.aseguradora ? ' · ' + escapeHtml(x.aseguradora) : ''} · ${eur(x.primaAnual)}/año</span></span>
+        <button class="icon-btn danger" data-segdel="${x.id}" type="button" aria-label="Eliminar seguro">🗑</button>
+      </div>`).join('')
+    : '<div class="hint">Sin seguros registrados. Añade vida, salud, hogar o coche.</div>';
 
   const objetivos = state.cubos.map((cb) => `
     <div class="panel-item">
-      <span style="flex:1">${escapeHtml(cb.nombre)}</span>
+      <input type="text" data-cubonombre="${cb.id}" value="${escapeHtml(cb.nombre)}" aria-label="Nombre del espacio" />
       <input type="text" class="w-budget" inputmode="decimal" data-obj="${cb.id}" value="${String(cb.objetivo || 0).replace('.', ',')}" aria-label="Porcentaje objetivo" /> %
+      <button class="icon-btn danger" data-cubodel="${cb.id}" type="button" aria-label="Eliminar espacio">🗑</button>
     </div>`).join('');
 
   const pg = state.ajustes.pagas || {};
@@ -3873,12 +5624,48 @@ function vistaAjustes(view) {
       <div class="card-title"><span>Posiciones de inversión</span></div>
       <p class="hint" style="margin-top:-4px;margin-bottom:8px">La app hace de «reparto anotado» del informe: emergencia y vivienda comparten la cuenta de efectivo de Trade Republic, y estas posiciones registran cuánto es de cada una. El último campo es la <strong>aportación planificada al mes</strong> (se sugiere al registrar).</p>
       ${portaleras}
+      ${archivadas ? `<div class="card-title" style="margin-top:16px"><span>Archivadas</span></div>${archivadas}` : ''}
       <button class="btn secondary small" id="btn-add-holding" type="button" style="margin-top:10px">+ Nueva posición</button>
     </div>
 
     <div class="card">
       <div class="card-title"><span>Reparto objetivo del patrimonio</span></div>
       ${objetivos}
+      <button class="btn secondary small" id="btn-add-cubo" type="button" style="margin-top:10px">+ Nuevo espacio</button>
+      <p class="hint">Estos porcentajes se comparan con tu cartera real en Plan y Patrimonio. No es obligatorio que sumen 100 %, pero conviene.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>Gastos e ingresos recurrentes</span></div>
+      ${recurrentes}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+        <button class="btn secondary small" id="btn-add-rec" type="button">+ Nuevo recurrente</button>
+        <button class="btn secondary small" id="btn-apply-rec" type="button">Aplicar pendientes</button>
+      </div>
+      <p class="hint">Al aplicar, se crean los gastos o ingresos de los meses pendientes hasta hoy. No se duplican si ya se aplicaron.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>Seguros</span></div>
+      ${seguros}
+      <button class="btn secondary small" id="btn-add-seg" type="button" style="margin-top:10px">+ Nuevo seguro</button>
+      <p class="hint">La prima anual se usa como referencia de protección; no se suma automáticamente al gasto mensual salvo que la registres como recurrente.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>Seguridad</span></div>
+      <p class="hint">Bloquea la app con un PIN local. No sustituye al cifrado del dispositivo, pero evita que cualquiera que abra el navegador vea tus finanzas.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn secondary small" id="btn-pin-set" type="button">${state.ajustes.pinHash ? 'Cambiar PIN' : 'Configurar PIN'}</button>
+        ${state.ajustes.pinHash ? '<button class="btn danger small" id="btn-pin-del" type="button">Quitar PIN</button>' : ''}
+      </div>
+      <p class="hint">El PIN se guarda hasheado en este dispositivo y no se sincroniza.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>Historial de versiones</span></div>
+      <p class="hint">El servidor local guarda una versión por cada sincronización. Puedes consultar y restaurar una versión anterior.</p>
+      <button class="btn secondary small" id="btn-versiones" type="button">Ver versiones del servidor</button>
     </div>
 
     <div class="card" style="border-color:var(--accent)">
@@ -3902,6 +5689,9 @@ function vistaAjustes(view) {
       <div class="card-title"><span>Sincronizar dispositivos en red local</span></div>
       <div class="field"><label for="aj-sync">Servidor de sincronización</label>
         <input id="aj-sync" type="url" placeholder="http://192.168.1.x:8750" value="${escapeHtml(state.ajustes.syncUrl || '')}" /></div>
+      <div class="field"><label for="aj-sync-token">Token del servidor (opcional, recomendado)</label>
+        <input id="aj-sync-token" type="password" placeholder="Si configuras SYNC_TOKEN en el servidor" value="${escapeHtml(state.ajustes.syncToken || '')}" /></div>
+      <p class="hint">Si el servidor tiene <code>SYNC_TOKEN</code>, la app debe enviar el mismo token. Se guarda solo en este dispositivo y no se sincroniza.</p>
       <label style="display:flex;align-items:center;gap:8px;margin:10px 0;font-size:0.9rem;color:var(--muted)">
         <input type="checkbox" id="aj-sync-auto" style="width:auto" ${state.ajustes.syncAuto !== false ? 'checked' : ''} />
         Al abrir la app, traer automáticamente lo más reciente de la nube
@@ -3918,6 +5708,8 @@ function vistaAjustes(view) {
       <div class="card-title"><span>Copia de seguridad</span></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn secondary small" id="btn-export" type="button">⬇️ Exportar datos (JSON)</button>
+        <button class="btn secondary small" id="btn-export-csv" type="button">⬇️ Movimientos CSV</button>
+        <button class="btn secondary small" id="btn-export-resumen" type="button">⬇️ Resumen CSV</button>
         <button class="btn secondary small" id="btn-import" type="button">⬆️ Importar datos</button>
         <button class="btn danger small" id="btn-reset" type="button">Borrar todo</button>
       </div>
@@ -3936,7 +5728,7 @@ function vistaAjustes(view) {
       <strong>Ordenador:</strong> en Chrome, icono de instalación en la barra de direcciones.</p>
     </div>
 
-    <p class="hint" style="text-align:center;margin-top:20px">Finanzas Personal · ${APP_VERSION} · los datos nunca salen de tu dispositivo</p>
+    <p class="hint" style="text-align:center;margin-top:20px">Finanzas Personal · ${APP_VERSION} · datos locales; si configuras nube o servidor, se sincronizan</p>
     </div>
   `;
 
@@ -3954,7 +5746,8 @@ function vistaAjustes(view) {
     const v = parseAmount(e.target.value);
     state.ajustes.ingreso = v ?? 0;
     state.ajustes.mod = Date.now();
-    guardarEstado(); toast('Ingreso actualizado');
+    reconciliarCuentasAuto();
+    guardarEstado(); toast('Ingreso actualizado y cuentas reconciliadas');
   });
 
   // Pagas extra
@@ -3973,22 +5766,27 @@ function vistaAjustes(view) {
   };
   $('#pg-activo').addEventListener('change', (e) => {
     pgActual().activo = e.target.checked;
+    reconciliarCuentasAuto();
     guardarEstado(); toast(e.target.checked ? 'Pagas extra activadas' : 'Pagas extra desactivadas'); render();
   });
   $('#pg-importe').addEventListener('change', (e) => {
     pgActual().importe = parseAmount(e.target.value) ?? 0;
-    guardarEstado(); toast('Importe de paga guardado');
+    reconciliarCuentasAuto();
+    guardarEstado(); toast('Importe de paga guardado y cuentas reconciliadas');
   });
   $('#pg-numero').addEventListener('change', (e) => {
     pgActual().numero = +e.target.value === 1 ? 1 : 2;
+    reconciliarCuentasAuto();
     guardarEstado(); pgRefrescar();
   });
   $('#pg-mes1').addEventListener('change', (e) => {
     pgActual().mes1 = +e.target.value || 6;
+    reconciliarCuentasAuto();
     guardarEstado();
   });
   $('#pg-mes2').addEventListener('change', (e) => {
     pgActual().mes2 = +e.target.value || 12;
+    reconciliarCuentasAuto();
     guardarEstado();
   });
   [['#pg-viv', 'vivienda'], ['#pg-etf', 'etf'], ['#pg-via', 'viajes']].forEach(([sel, clave]) => {
@@ -3996,6 +5794,7 @@ function vistaAjustes(view) {
       const p = pgActual();
       p.reparto = p.reparto || {};
       p.reparto[clave] = Math.min(Math.max(parseAmount(e.target.value) ?? 0, 0), 100);
+      reconciliarCuentasAuto();
       guardarEstado(); pgRefrescar();
     });
   });
@@ -4005,7 +5804,16 @@ function vistaAjustes(view) {
     const c = catPorId(el.dataset.cnombre); c.nombre = el.value.trim() || c.nombre; stamp(c); guardarEstado();
   }));
   view.querySelectorAll('[data-cpres]').forEach((el) => el.addEventListener('change', () => {
-    const c = catPorId(el.dataset.cpres); c.presupuesto = parseAmount(el.value) ?? 0; stamp(c); guardarEstado();
+    const c = catPorId(el.dataset.cpres);
+    const valor = Math.max(0, parseAmount(el.value) ?? 0);
+    c.presupuesto = valor;
+    registrarPresupuesto(c.id, valor, currentMonthKey());
+    stamp(c); guardarEstado();
+  }));
+  view.querySelectorAll('[data-ctipo]').forEach((el) => el.addEventListener('change', () => {
+    const c = catPorId(el.dataset.ctipo);
+    c.tipo = el.value;
+    stamp(c); guardarEstado();
   }));
   view.querySelectorAll('[data-cdel]').forEach((el) => el.onclick = () => {
     const id = el.dataset.cdel;
@@ -4013,11 +5821,15 @@ function vistaAjustes(view) {
     const usada = state.gastos.some((g) => g.catId === id);
     if (!confirm(usada ? 'Esta etiqueta tiene gastos guardados. Al borrarla seguirán como «Sin categoría». ¿Borrar?' : '¿Borrar esta etiqueta?')) return;
     if (c) tumba('categorias', id);
+    for (const p of (state.presupuestosHistorial || []).filter((x) => x.catId === id)) tumba('presupuestosHistorial', p.id);
+    state.presupuestosHistorial = (state.presupuestosHistorial || []).filter((x) => x.catId !== id);
     state.categorias = state.categorias.filter((x) => x.id !== id);
     guardarEstado(); render();
   });
   $('#btn-add-cat').onclick = () => {
-    state.categorias.push(stamp({ id: uid(), nombre: 'Nueva etiqueta', presupuesto: 0, color: PALETA[state.categorias.length % PALETA.length] }));
+    const nueva = stamp({ id: uid(), nombre: 'Nueva etiqueta', presupuesto: 0, color: PALETA[state.categorias.length % PALETA.length], tipo: 'variable' });
+    state.categorias.push(nueva);
+    registrarPresupuesto(nueva.id, 0, currentMonthKey());
     guardarEstado(); render();
   };
 
@@ -4031,23 +5843,66 @@ function vistaAjustes(view) {
   view.querySelectorAll('[data-hplan]').forEach((el) => el.addEventListener('change', () => {
     const h = holdingPorId(el.dataset.hplan); h.plan = parseAmount(el.value) ?? 0; stamp(h); guardarEstado();
   }));
+  view.querySelectorAll('[data-hedit]').forEach((el) => el.onclick = () => modalCuenta(el.dataset.hedit));
+  view.querySelectorAll('[data-hrestore]').forEach((el) => el.onclick = () => {
+    const h = holdingPorId(el.dataset.hrestore);
+    if (!h) return;
+    h.archivada = false; h.activa = true; stamp(h);
+    guardarEstado(); toast('Posición restaurada'); render();
+  });
   view.querySelectorAll('[data-hdel]').forEach((el) => el.onclick = () => {
     const id = el.dataset.hdel;
-    if (!confirm('¿Borrar esta posición? Su historial de valores también se borrará.')) return;
-    if (holdingPorId(id)) tumba('holdings', id);
-    state.holdings = state.holdings.filter((h) => h.id !== id);
-    for (const s of state.snapshots) {
-      if (s.valores[id] != null || s.aportes[id] != null) {
-        delete s.valores[id]; delete s.aportes[id];
-        stamp(s);
-      }
-    }
-    guardarEstado(); render();
+    const h = holdingPorId(id);
+    if (!h) return;
+    if (!confirm(`¿Archivar «${h.nombre}»? Su historial se conserva y deja de contar en el patrimonio actual.`)) return;
+    h.archivada = true;
+    h.activa = false;
+    stamp(h);
+    guardarEstado(); toast('Posición archivada'); render();
   });
-  $('#btn-add-holding').onclick = () => {
-    state.holdings.push(stamp({ id: uid(), nombre: 'Nueva posición', cubo: state.cubos[0]?.id || 'liquidez', plan: 0 }));
-    guardarEstado(); render();
+  $('#btn-add-holding').onclick = () => modalCuenta();
+
+  // Recurrentes
+  const addRec = $('#btn-add-rec');
+  if (addRec) addRec.onclick = () => modalRecurrente();
+  const applyRec = $('#btn-apply-rec');
+  if (applyRec) applyRec.onclick = () => aplicarRecurrentes();
+  view.querySelectorAll('[data-recedit]').forEach((el) => el.onclick = () => modalRecurrente(el.dataset.recedit));
+  view.querySelectorAll('[data-recdel]').forEach((el) => el.onclick = () => {
+    const r = (state.recurrentes || []).find((x) => x.id === el.dataset.recdel);
+    if (!r) return;
+    if (!confirm(`¿Eliminar el recurrente «${r.nombre}»?`)) return;
+    tumba('recurrentes', r.id);
+    state.recurrentes = state.recurrentes.filter((x) => x.id !== r.id);
+    guardarEstado(); toast('Recurrente eliminado'); render();
+  });
+
+  // Seguros
+  const addSeg = $('#btn-add-seg');
+  if (addSeg) addSeg.onclick = () => modalSeguro();
+  view.querySelectorAll('[data-segdel]').forEach((el) => el.onclick = () => {
+    const x = (state.seguros || []).find((s) => s.id === el.dataset.segdel);
+    if (!x) return;
+    if (!confirm(`¿Eliminar el seguro «${x.nombre}»?`)) return;
+    tumba('seguros', x.id);
+    state.seguros = state.seguros.filter((s) => s.id !== x.id);
+    guardarEstado(); toast('Seguro eliminado'); render();
+  });
+
+  // Seguridad: PIN
+  const pinSet = $('#btn-pin-set');
+  if (pinSet) pinSet.onclick = () => modalPin();
+  const pinDel = $('#btn-pin-del');
+  if (pinDel) pinDel.onclick = () => {
+    if (!confirm('¿Quitar el PIN de este dispositivo?')) return;
+    state.ajustes.pinHash = null;
+    state.ajustes.mod = Date.now();
+    guardarEstado(); toast('PIN eliminado'); render();
   };
+
+  // Historial de versiones
+  const btnVersiones = $('#btn-versiones');
+  if (btnVersiones) btnVersiones.onclick = () => modalVersiones();
 
   // Objetivos
   view.querySelectorAll('[data-obj]').forEach((el) => el.addEventListener('change', () => {
@@ -4057,19 +5912,45 @@ function vistaAjustes(view) {
     stamp(cb);
     guardarEstado();
   }));
+  view.querySelectorAll('[data-cubonombre]').forEach((el) => el.addEventListener('change', () => {
+    const cb = cuboPorId(el.dataset.cubonombre);
+    cb.nombre = el.value.trim() || cb.nombre;
+    stamp(cb); guardarEstado();
+  }));
+  view.querySelectorAll('[data-cubodel]').forEach((el) => el.onclick = () => {
+    const id = el.dataset.cubodel;
+    const cb = cuboPorId(id);
+    if (!cb) return;
+    const usado = state.holdings.some((h) => h.cubo === id) || (state.objetivos || []).some((g) => g.cuboId === id);
+    if (usado) return toast('No puedes borrar un espacio con posiciones u objetivos', 'error');
+    if (!confirm(`¿Eliminar el espacio «${cb.nombre}»?`)) return;
+    tumba('cubos', id);
+    state.cubos = state.cubos.filter((x) => x.id !== id);
+    guardarEstado(); toast('Espacio eliminado'); render();
+  });
+  const addCubo = $('#btn-add-cubo');
+  if (addCubo) addCubo.onclick = () => {
+    state.cubos.push(stamp({ id: uid(), nombre: 'Nuevo espacio', objetivo: 0 }));
+    guardarEstado(); render();
+  };
 
   // Datos
   $('#btn-export').onclick = () => {
-    // El token y la config de sincronización son de cada dispositivo: no se exportan
     const copia = JSON.parse(JSON.stringify(state));
-    if (copia.ajustes) { delete copia.ajustes.github; delete copia.ajustes.syncUrl; delete copia.ajustes.syncAuto; }
-    const blob = new Blob([JSON.stringify(copia, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `finanzas-backup-${hoyISO()}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    if (copia.ajustes) {
+      delete copia.ajustes.github;
+      delete copia.ajustes.syncUrl;
+      delete copia.ajustes.syncAuto;
+      delete copia.ajustes.syncToken;
+      delete copia.ajustes.pinHash;
+    }
+    descargarArchivo(`finanzas-backup-${hoyISO()}.json`, JSON.stringify(copia, null, 2), 'application/json');
+    toast('Backup JSON descargado');
   };
+  const exportCsvAjustes = $('#btn-export-csv');
+  if (exportCsvAjustes) exportCsvAjustes.onclick = () => descargarCSVMovimientos();
+  const exportResumen = $('#btn-export-resumen');
+  if (exportResumen) exportResumen.onclick = () => descargarResumenCSV();
   $('#btn-import').onclick = () => $('#file-import').click();
   $('#file-import').onchange = (e) => {
     const file = e.target.files[0];
@@ -4077,45 +5958,69 @@ function vistaAjustes(view) {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const s = JSON.parse(reader.result);
-        if (!s || typeof s !== 'object' || !Array.isArray(s.categorias)) throw new Error('formato');
-        // conservar la config de nube propia de este dispositivo
-        s.ajustes = {
-          ...(s.ajustes || {}),
-          github: state.ajustes.github,
-          syncUrl: state.ajustes.syncUrl,
-          syncAuto: state.ajustes.syncAuto,
+        const bruto = JSON.parse(reader.result);
+        if (!bruto || typeof bruto !== 'object' || !Array.isArray(bruto.categorias)) throw new Error('formato');
+        // Backup automático antes de reemplazar
+        const copia = JSON.parse(JSON.stringify(state));
+        if (copia.ajustes) { delete copia.ajustes.github; delete copia.ajustes.syncUrl; delete copia.ajustes.syncAuto; delete copia.ajustes.syncToken; delete copia.ajustes.pinHash; }
+        descargarArchivo(`finanzas-antes-de-importar-${hoyISO()}.json`, JSON.stringify(copia, null, 2), 'application/json');
+        const anterior = state;
+        const importado = normalizarEstado(bruto);
+        const ahora = Date.now();
+        const tombas = [];
+        for (const col of COLECCIONES) {
+          const idsNuevos = new Set((importado[col] || []).map((x) => x && x.id).filter(Boolean));
+          for (const x of (anterior[col] || [])) {
+            if (x && x.id && !idsNuevos.has(x.id)) tombas.push({ t: col, id: x.id, mod: ahora });
+          }
+        }
+        importado.eliminados = [...(importado.eliminados || []), ...tombas];
+        importado.ajustes = {
+          ...(importado.ajustes || {}),
+          github: anterior.ajustes.github,
+          syncUrl: anterior.ajustes.syncUrl,
+          syncAuto: anterior.ajustes.syncAuto,
+          syncToken: anterior.ajustes.syncToken,
+          pinHash: anterior.ajustes.pinHash,
+          mod: ahora,
         };
-        guardarEstado(s);
-        toast('Datos importados'); render();
+        guardarEstado(importado);
+        toast('Datos importados; se descargó un backup del estado anterior');
+        render();
       } catch {
-        toast('El archivo no es un backup válido', 'error');
+        toast('El archivo no es un backup válido; no se ha cambiado nada', 'error');
       }
     };
     reader.readAsText(file);
     e.target.value = '';
   };
   $('#btn-reset').onclick = () => {
-    if (!confirm('Se borrarán TODOS los datos en este dispositivo Y en los otros conectados (gastos, inversiones y ajustes). ¿Continuar?')) return;
-    if (!confirm('¿Seguro? Se recomienda exportar antes. La acción no se puede deshacer.')) return;
+    if (!confirm('Se borrarán TODOS los datos en este dispositivo Y en los otros conectados (gastos, inversiones, deudas y ajustes). ¿Continuar?')) return;
+    if (!confirm('¿Seguro? Se descargará un backup antes. La acción no se puede deshacer en los dispositivos.')) return;
+    const copia = JSON.parse(JSON.stringify(state));
+    if (copia.ajustes) { delete copia.ajustes.github; delete copia.ajustes.syncUrl; delete copia.ajustes.syncAuto; delete copia.ajustes.syncToken; delete copia.ajustes.pinHash; }
+    descargarArchivo(`finanzas-antes-de-borrar-${hoyISO()}.json`, JSON.stringify(copia, null, 2), 'application/json');
     const ahora = Date.now();
-    const tombas = [
-      ...state.gastos.map((g) => ({ t: 'gastos', id: g.id, mod: ahora })),
-      ...state.snapshots.map((s) => ({ t: 'snapshots', id: s.id || s.month, mod: ahora })),
-      ...state.categorias.map((c) => ({ t: 'categorias', id: c.id, mod: ahora })),
-      ...state.holdings.map((h) => ({ t: 'holdings', id: h.id, mod: ahora })),
-      ...state.cubos.map((c) => ({ t: 'cubos', id: c.id, mod: ahora })),
-      ...(state.objetivos || []).map((g) => ({ t: 'objetivos', id: g.id, mod: ahora })),
-    ];
-    const urlSync = state.ajustes.syncUrl, autoSync = state.ajustes.syncAuto, github = state.ajustes.github;
-    state = seedState();
+    const tombas = [];
+    for (const col of COLECCIONES) {
+      for (const x of (state[col] || [])) if (x && x.id) tombas.push({ t: col, id: x.id, mod: ahora });
+    }
+    const urlSync = state.ajustes.syncUrl;
+    const autoSync = state.ajustes.syncAuto;
+    const github = state.ajustes.github;
+    const syncToken = state.ajustes.syncToken;
+    const pinHash = state.ajustes.pinHash;
+    state = normalizarEstado(seedState());
     state.eliminados = [...(state.eliminados || []), ...tombas];
     state.ajustes.syncUrl = urlSync;
     state.ajustes.syncAuto = autoSync;
     state.ajustes.github = github;
+    state.ajustes.syncToken = syncToken;
+    state.ajustes.pinHash = pinHash;
+    state.ajustes.mod = ahora;
     guardarEstado(); // se sincroniza el borrado a los demás dispositivos
     ui.month = currentMonthKey();
-    toast('Todo borrado');
+    toast('Todo borrado; backup descargado');
     render();
   };
 
@@ -4124,6 +6029,12 @@ function vistaAjustes(view) {
     state.ajustes.syncUrl = e.target.value.trim();
     guardarEstado(state, true);
     toast('URL de sincronización guardada');
+  });
+  const syncTokenInput = $('#aj-sync-token');
+  if (syncTokenInput) syncTokenInput.addEventListener('change', (e) => {
+    state.ajustes.syncToken = e.target.value.trim();
+    guardarEstado(state, true);
+    toast('Token del servidor guardado');
   });
   $('#aj-sync-auto').addEventListener('change', (e) => {
     state.ajustes.syncAuto = e.target.checked;
@@ -4219,11 +6130,12 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 (() => {
   const h = location.hash.replace('#', '');
   const tab = TAB_LEGACY[h] || h;
-  if (['inicio', 'gastos', 'patrimonio', 'analisis', 'objetivos', 'compartidos', 'ajustes'].includes(tab)) {
+  if (['inicio', 'gastos', 'patrimonio', 'analisis', 'objetivos', 'plan', 'compartidos', 'ajustes'].includes(tab)) {
     ui.tab = tab;
   }
   marcarTabActiva(ui.tab);
   render();
+  if (state.ajustes.pinHash) bloquearApp();
   if (autoSyncActivo()) syncAhora();
 })();
 

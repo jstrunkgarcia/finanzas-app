@@ -16,7 +16,7 @@ git rev-parse --git-dir > /dev/null 2>&1 || git init -q
 # identidad de git necesaria para el commit (solo local a esta carpeta)
 git config user.name >/dev/null 2>&1 || git config user.name "finanzas-app"
 git config user.email >/dev/null 2>&1 || git config user.email "finanzas-app@users.noreply.github.com"
-git add index.html styles.css app.js sw.js manifest.json icons iniciar.sh sync_server.py instalar_servicio.sh
+git add README.md index.html styles.css app.js lib.js sw.js manifest.json icons iniciar.sh sync_server.py instalar_servicio.sh .gitignore
 git commit -m "Finanzas Personal: publicación" --allow-empty
 git branch -M main
 git remote remove origin 2>/dev/null || true

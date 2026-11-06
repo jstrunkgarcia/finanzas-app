@@ -1803,3 +1803,57 @@ button, .chip, .exp-item, .holding-card, .history-item, #tabs .tab, .mini-card {
   .view-analisis .analysis-kpi .hint { font-size: 0.68rem; }
   .view-analisis .cat-compare-ico { display: none; }
 }
+
+/* ============ Plan financiero ============ */
+.plan-page { max-width: 1120px; margin: 0 auto; }
+.plan-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.plan-page .card { margin-bottom: 16px; }
+.plan-page .card-head h2 { font-size: 0.98rem; }
+.plan-page .card-head p { font-size: 0.75rem; }
+.form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.form-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.form-grid .field { margin-bottom: 0; }
+.form-grid input, .form-grid select { width: 100%; }
+.plan-classes { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+.plan-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.pat-net-breakdown { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.pat-net-breakdown div { display: flex; flex-direction: column; gap: 3px; }
+.pat-net-breakdown span { color: var(--muted-2); font-size: 0.68rem; }
+.pat-net-breakdown strong { font-size: 0.84rem; font-variant-numeric: tabular-nums; }
+.pat-debt-list { display: flex; flex-direction: column; gap: 2px; }
+.pat-debt-row { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+.pat-debt-row:last-child { border-bottom: 0; }
+.pat-debt-main { flex: 1; min-width: 0; }
+.pat-debt-main strong { display: block; font-size: 0.84rem; }
+.pat-debt-main span { display: block; color: var(--muted-2); font-size: 0.7rem; margin-top: 2px; }
+.pat-debt-values { text-align: right; flex: none; }
+.pat-debt-values strong { display: block; font-size: 0.84rem; font-variant-numeric: tabular-nums; }
+.pat-debt-values span { display: block; color: var(--muted-2); font-size: 0.68rem; margin-top: 2px; }
+.pin-lock { z-index: 9999; backdrop-filter: blur(18px); }
+.pin-modal { max-width: 360px; text-align: center; }
+.pin-logo { font-size: 2rem; margin-bottom: 4px; }
+.pin-modal .field { margin: 14px 0 10px; }
+.pin-modal input { text-align: center; letter-spacing: 0.35em; font-size: 1.3rem; }
+@media (max-width: 980px) {
+  .plan-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .form-grid, .form-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .plan-kpis { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .form-grid, .form-grid-4 { grid-template-columns: 1fr; }
+  .pat-net-breakdown { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pat-debt-row { flex-wrap: wrap; }
+  .pat-debt-values { text-align: left; }
+}
+@media print {
+  .topbar, #tabs, .btn, .icon-btn, .card-link, .gastos-cta-dock, .banner, .pat-more-summary { display: none !important; }
+  body { background: #fff; color: #111; }
+  .card { break-inside: avoid; border-color: #ddd; }
+}
+@media (max-width: 620px) {
+  #tabs .tab-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+}
+@media print {
+  input, select, textarea { border: 0 !important; background: transparent !important; color: #111 !important; box-shadow: none !important; }
+  .plan-page .card { page-break-inside: avoid; }
+}
