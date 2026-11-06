@@ -1874,3 +1874,7 @@ button, .chip, .exp-item, .holding-card, .history-item, #tabs .tab, .mini-card {
   .view-gastos .gastos-head > div:first-child,
   .view-patrimonio .pat-head > div:first-child { width: 100%; }
 }
+@media (max-width: 340px) {
+  #tabs .tab[data-tab="patrimonio"] .tab-label { font-size: 0; }
+  #tabs .tab[data-tab="patrimonio"] .tab-label::after { content: "Patrim."; font-size: 0.55rem; }
+}

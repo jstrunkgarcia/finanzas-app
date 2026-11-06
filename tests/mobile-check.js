@@ -10,6 +10,7 @@ const BASE = process.env.APP_URL || 'http://127.0.0.1:3005';
 const OUT = process.env.OUT_DIR || '/tmp/opencode/mobile';
 const TABS = ['inicio', 'gastos', 'patrimonio', 'analisis', 'objetivos', 'plan', 'ajustes', 'compartidos'];
 const VIEWPORTS = [
+  { width: 320, height: 568, name: '320' },
   { width: 360, height: 800, name: '360' },
   { width: 390, height: 844, name: '390' },
   { width: 414, height: 896, name: '414' },

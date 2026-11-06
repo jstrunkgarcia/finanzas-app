@@ -48,9 +48,12 @@ y pega el mismo token en **Ajustes → Sincronizar dispositivos en red local**.
 Incluye comprobaciones de sintaxis y tests de utilidades (`tests/lib.test.js`). El smoke test de UI (`tests/ui-smoke.js`) requiere Chrome con CDP y un servidor local:
 
 ```bash
-google-chrome --headless=new --remote-debugging-port=9222 --user-data-dir=/tmp/finanzas-cdp http://localhost:8000/#gastos
+google-chrome --headless=new --remote-debugging-port=9222 --user-data-dir=/tmp/finanzas-cdp http://localhost:3005/#gastos
 CDP_PORT=9222 node tests/ui-smoke.js
+CDP_PORT=9222 node tests/mobile-check.js
 ```
+
+`mobile-check.js` comprueba 320, 360, 390 y 414 px en todas las vistas, detecta desbordamientos horizontales y guarda capturas en `/tmp/opencode/mobile`.
 
 ## Estructura
 
