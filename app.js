@@ -3051,6 +3051,8 @@ function vistaPlan(view) {
   const capitalJub = proyJub.length ? proyJub[proyJub.length - 1].nominal : r.patrimonio;
   const capitalJubReal = proyJub.length ? proyJub[proyJub.length - 1].real : r.patrimonio;
   const fireCubre = capitalJubReal >= r.fire;
+  const aniosFireTxt = r.aniosFire == null ? '—' : r.aniosFire.toFixed(1).replace('.', ',');
+  const edadFireTxt = r.edadFire == null ? '—' : r.edadFire.toFixed(1).replace('.', ',');
   const labels = proy.map((x) => `${x.anio}a`);
   const chart = lineaChart(proy.map((x) => x.nominal), labels, { color: '#2eea8b' });
   const filas = [1, 5, 10, 15, 20, 25, 30].map((a) => {
@@ -3090,7 +3092,7 @@ function vistaPlan(view) {
         <div class="stat"><div class="label">Tasa de ahorro</div><div class="value ${r.tasaAhorro != null && r.tasaAhorro >= 0.2 ? 'pct-good' : 'pct-bad'}">${fmtPct(r.tasaAhorro, { conSigno: false, decimales: 1 })}</div><div class="hint">${eur(r.ahorroAnual)}/año · ${eur(r.ahorroMensual)}/mes</div></div>
         <div class="stat"><div class="label">Patrimonio neto</div><div class="value">${eur0(r.patrimonio)}</div><div class="hint">${r.deudas > 0 ? `Deudas ${eur0(r.deudas)}` : 'Sin deudas registradas'}</div></div>
         <div class="stat"><div class="label">Colchón</div><div class="value ${r.mesesColchon != null && r.mesesColchon >= p.colchonMeses ? 'pct-good' : 'pct-bad'}">${r.mesesColchon == null ? '—' : r.mesesColchon.toFixed(1).replace('.', ',') + ' meses'}</div><div class="hint">${eur0(r.colchon)} · objetivo ${p.colchonMeses} meses</div></div>
-        <div class="stat"><div class="label">Número FIRE</div><div class="value">${eur0(r.fire)}</div><div class="hint">${r.aniosFire == null ? 'Sin fecha con estos supuestos' : `${r.aniosFire} años · edad ${r.edadFire}`}</div></div>
+        <div class="stat"><div class="label">Número FIRE</div><div class="value">${eur0(r.fire)}</div><div class="hint">${r.aniosFire == null ? 'Sin fecha con estos supuestos' : `${aniosFireTxt} años · edad ${edadFireTxt}`}</div></div>
       </div>
 
       <section class="card">
@@ -3175,7 +3177,7 @@ function vistaPlan(view) {
         <div class="card-head"><div><h2>Jubilación / FIRE</h2><p>Con tu gasto actual y la tasa de retirada elegida</p></div></div>
         <div class="stat-grid two">
           <div class="stat"><div class="label">Número FIRE</div><div class="value">${eur0(r.fire)}</div><div class="hint">Gasto anual ${eur0(r.gastoAnual)} ÷ ${p.tasaRetirada} %</div></div>
-          <div class="stat"><div class="label">Años hasta FIRE</div><div class="value">${r.aniosFire == null ? '—' : r.aniosFire}</div><div class="hint">${r.edadFire == null ? 'Ajusta aportación o rentabilidad' : `Edad estimada ${r.edadFire}`}</div></div>
+          <div class="stat"><div class="label">Años hasta FIRE</div><div class="value">${aniosFireTxt}</div><div class="hint">${r.edadFire == null ? 'Ajusta aportación o rentabilidad' : `Edad estimada ${edadFireTxt}`}</div></div>
           <div class="stat"><div class="label">Patrimonio actual</div><div class="value">${eur0(r.patrimonio)}</div><div class="hint">${fmtPct(r.fire > 0 ? r.patrimonio / r.fire : null, { conSigno: false, decimales: 1 })} del objetivo</div></div>
           <div class="stat"><div class="label">Ahorro necesario</div><div class="value">${eur0(Math.max(0, r.ahorroMensual))}/mes</div><div class="hint">${r.ahorroMensual < 0 ? 'Déficit: recorta gasto o sube ingresos' : 'Aportación actual del plan'}</div></div>
           <div class="stat"><div class="label">Capital a los ${p.edadJubilacion} años</div><div class="value ${fireCubre ? 'pct-good' : 'pct-warn'}">${eur0(capitalJub)}</div><div class="hint">${eur0(capitalJubReal)} en euros de hoy · ${fireCubre ? 'cubre el número FIRE' : 'no llega al número FIRE'}</div></div>

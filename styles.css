@@ -1857,3 +1857,20 @@ button, .chip, .exp-item, .holding-card, .history-item, #tabs .tab, .mini-card {
   input, select, textarea { border: 0 !important; background: transparent !important; color: #111 !important; box-shadow: none !important; }
   .plan-page .card { page-break-inside: avoid; }
 }
+
+/* ============ Ajustes móviles de cabeceras, banners y planes ============ */
+@media (max-width: 620px) {
+  .page-head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .page-head-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 8px; }
+  .page-head-actions .btn { flex: 1 1 auto; }
+  .gastos-head .month-nav { flex: 1 1 100%; }
+  .banner { display: grid; grid-template-columns: 38px minmax(0, 1fr); align-items: start; gap: 10px; }
+  .banner .banner-text { grid-column: 2; }
+  .banner .btn { grid-column: 1 / -1; width: 100%; margin-left: 0; }
+}
+@media (max-width: 620px) {
+  .view-gastos .gastos-head,
+  .view-patrimonio .pat-head { align-items: stretch; flex-wrap: wrap; }
+  .view-gastos .gastos-head > div:first-child,
+  .view-patrimonio .pat-head > div:first-child { width: 100%; }
+}
