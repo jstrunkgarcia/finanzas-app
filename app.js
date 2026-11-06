@@ -190,6 +190,8 @@ function seedState() {
     ajustes: {
       nombre: '',
       ingreso: 1553.23,
+      diaCobro: 1,
+      cuentaIbercaja: null,
       pagas: {
         activo: true,
         numero: 2,          // 1 o 2 pagas al año
@@ -265,6 +267,8 @@ function cargarEstado() {
       const s = JSON.parse(raw);
       if (s && Array.isArray(s.categorias)) {
         s.ajustes.nombre = typeof s.ajustes.nombre === 'string' ? s.ajustes.nombre : '';
+        s.ajustes.diaCobro = Math.min(31, Math.max(1, +s.ajustes.diaCobro || 1));
+        s.ajustes.cuentaIbercaja = s.ajustes.cuentaIbercaja || null;
         s.ajustes.objetivoCasa = s.ajustes.objetivoCasa || seedState().ajustes.objetivoCasa;
         s.ajustes.pagas = s.ajustes.pagas || seedState().ajustes.pagas;
         s.eliminados = Array.isArray(s.eliminados) ? s.eliminados : [];
@@ -497,11 +501,111 @@ function distribucionCubos() {
   }).filter((b) => b.total > 0 || true);
 }
 
+/* ============ Cuenta Ibercaja: saldo derivado ============ */
+function holdingIbercaja() {
+  return state.holdings.find((h) => h.id === 'h-ibercaja') || state.holdings.find((h) => h.cubo === 'diaadia') || null;
+}
+
+function totalAportesInversion() {
+  const iber = holdingIbercaja();
+  let total = 0;
+  for (const sn of state.snapshots || []) {
+    const ap = sn.aportes || {};
+    for (const h of state.holdings || []) {
+      if (iber && h.id === iber.id) continue;
+      total += +ap[h.id] || 0;
+    }
+  }
+  return Math.round(total * 100) / 100;
+}
+
+function ingresosAutomaticosIbercaja(cfg) {
+  const ingreso = +state.ajustes.ingreso || 0;
+  const paga = pagasConfig();
+  const pagaMeses = new Set(mesesDePagas());
+  const base = new Date(cfg.fechaBase);
+  if (!isFinite(base.getTime())) return { nominas: 0, pagas: 0 };
+  const hoy = new Date();
+  const dia = Math.min(31, Math.max(1, +cfg.diaCobro || 1));
+  let y = base.getFullYear(), m = base.getMonth(), nominas = 0, pagas = 0;
+  while (y < hoy.getFullYear() || (y === hoy.getFullYear() && m <= hoy.getMonth())) {
+    const ultimoDia = new Date(y, m + 1, 0).getDate();
+    const pago = new Date(y, m, Math.min(dia, ultimoDia));
+    if (pago > base && pago <= hoy) {
+      nominas += ingreso;
+      if (paga.activo && pagaMeses.has(m + 1)) pagas += +paga.importe || 0;
+    }
+    m += 1;
+    if (m === 12) { m = 0; y += 1; }
+  }
+  return { nominas, pagas };
+}
+
+function cuentaIbercajaConfig() {
+  const actual = state.ajustes.cuentaIbercaja;
+  if (actual && isFinite(+actual.saldoBase)) {
+    let cambio = false;
+    if (!actual.fechaBase || !isFinite(new Date(actual.fechaBase).getTime())) { actual.fechaBase = new Date().toISOString(); cambio = true; }
+    if (!isFinite(+actual.aportesBase)) { actual.aportesBase = totalAportesInversion(); cambio = true; }
+    const dia = Math.min(31, Math.max(1, +actual.diaCobro || 1));
+    if (+actual.diaCobro !== dia) { actual.diaCobro = dia; cambio = true; }
+    if (cambio) { state.ajustes.mod = Date.now(); guardarEstado(state, true); }
+    return actual;
+  }
+  const h = holdingIbercaja();
+  const base = h ? statsHolding(h.id).valorActual : 0;
+  state.ajustes.cuentaIbercaja = {
+    saldoBase: Math.round(base * 100) / 100,
+    fechaBase: new Date().toISOString(),
+    aportesBase: totalAportesInversion(),
+    diaCobro: Math.min(31, Math.max(1, +state.ajustes.diaCobro || 1)),
+  };
+  state.ajustes.mod = Date.now();
+  guardarEstado(state, true);
+  return state.ajustes.cuentaIbercaja;
+}
+
+function desgloseIbercaja() {
+  const cfg = cuentaIbercajaConfig();
+  const baseMs = new Date(cfg.fechaBase).getTime() || 0;
+  const gastos = (state.gastos || [])
+    .filter((g) => (+g.creado || 0) > baseMs)
+    .reduce((a, g) => a + (+g.monto || 0), 0);
+  const bizums = (state.bizums || [])
+    .filter((b) => (+b.creado || 0) > baseMs)
+    .reduce((a, b) => a + (+b.importe || 0), 0);
+  const ingresosAuto = ingresosAutomaticosIbercaja(cfg);
+  const nominas = ingresosAuto.nominas;
+  const pagas = ingresosAuto.pagas;
+  const traspasos = Math.max(0, totalAportesInversion() - (+cfg.aportesBase || 0));
+  const actual = (+cfg.saldoBase || 0) + nominas + pagas + bizums - gastos - traspasos;
+  return {
+    cfg,
+    base: +cfg.saldoBase || 0,
+    gastos: Math.round(gastos * 100) / 100,
+    bizums: Math.round(bizums * 100) / 100,
+    nominas: Math.round(nominas * 100) / 100,
+    pagas: Math.round(pagas * 100) / 100,
+    traspasos: Math.round(traspasos * 100) / 100,
+    actual: Math.round(actual * 100) / 100,
+  };
+}
+
+function saldoIbercajaActual() {
+  return desgloseIbercaja().actual;
+}
+
+function ajusteIbercaja() {
+  const h = holdingIbercaja();
+  if (!h) return 0;
+  return Math.round((saldoIbercajaActual() - statsHolding(h.id).valorActual) * 100) / 100;
+}
+
 /* Saldos actuales agrupados por entidad y por función */
 function saldosActuales() {
   const val = (hid) => statsHolding(hid).valorActual;
   const sumCubos = (ids) => state.holdings.filter((h) => ids.includes(h.cubo)).reduce((a, h) => a + val(h.id), 0);
-  const diaadia = sumCubos(['diaadia']);
+  const diaadia = Math.round((sumCubos(['diaadia']) + ajusteIbercaja()) * 100) / 100;
   const colchon = sumCubos(['emergencia']);
   const vivienda = sumCubos(['vivienda']);
   const viajes = sumCubos(['viajes']);
@@ -511,7 +615,7 @@ function saldosActuales() {
   const conocidos = ['diaadia', 'emergencia', 'vivienda', 'viajes', 'jubilacion'];
   const otros = state.holdings.filter((h) => !conocidos.includes(h.cubo)).reduce((a, h) => a + val(h.id), 0);
   const tr = efectivoTR + inversion + otros;
-  return { diaadia, colchon, vivienda, viajes, ahorro, inversion, efectivoTR, otros, tr, total: diaadia + tr };
+  return { diaadia, colchon, vivienda, viajes, ahorro, inversion, efectivoTR, otros, tr, total: Math.round((diaadia + tr) * 100) / 100 };
 }
 
 /* ============ Objetivo: casa ============ */
@@ -896,7 +1000,7 @@ function vistaInicio(view) {
           <div class="networth-top">
             <div class="networth-copy">
               <span class="networth-label">Patrimonio total</span>
-              <div class="hero-value networth-value">${eur(stats.total)}</div>
+              <div class="hero-value networth-value">${eur(saldos.total)}</div>
               <div class="networth-trend ${variacion == null ? 'neutral' : variacion < 0 ? 'negative' : 'positive'}">
                 ${variacion != null ? `<span class="trend-mark" aria-hidden="true">${variacion < 0 ? '▼' : '▲'}</span>` : ''}
                 <strong>${fmtPct(variacion, { decimales: 1 })}</strong>
@@ -904,7 +1008,7 @@ function vistaInicio(view) {
               </div>
               <span class="networth-aportado">Aportado ${eur(stats.aportado)}</span>
             </div>
-            ${stats.total > 0 ? `<div class="networth-spark">${sparkDatos(serie.length > 1 ? serie.map((s) => s.post) : [stats.total, stats.total], { w: 150, h: 46, suave: true, area: true })}</div>` : ''}
+            ${saldos.total > 0 ? `<div class="networth-spark">${sparkDatos(serie.length > 1 ? serie.map((s) => s.post) : [saldos.total, saldos.total], { w: 150, h: 46, suave: true, area: true })}</div>` : ''}
           </div>
           <div class="hero-actions">
             <button class="btn small" id="inicio-ver-patrimonio" type="button">${icono('patrimonio', 16)} Ver patrimonio</button>
@@ -1595,12 +1699,15 @@ function modalObjetivoNuevo(goal = null) {
 function modalRegistrar(mk = null) {
   const mes = mk || ui.month;
   const snap = snapPorMes(mes);
+  const iberId = holdingIbercaja() ? holdingIbercaja().id : null;
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
     <div class="modal">
       <h3>${snap ? 'Editar' : 'Registrar'} valores · ${fmtMes(mes)}</h3>
-      <p class="hint" style="margin-top:-6px">Introduce el <strong>valor de cada posición el día 1</strong> (antes de la aportación) y lo que inviertes ese día.</p>
+      <p class="hint" style="margin-top:-6px">Introduce el <strong>valor de cada posición el día 1</strong>. Las aportaciones a inversión se descuentan del saldo de Ibercaja y se suman a la posición.</p>
+      <p class="hint" style="margin-top:-6px">Para corregir el saldo actual de Ibercaja, usa su fila en Patrimonio.</p>
+      <button class="card-link" id="reg-ajustar-ibercaja" type="button" style="margin-bottom:10px">Ajustar saldo actual de Ibercaja ${icono('flecha', 13)}</button>
       ${!snap && pagasConfig().activo && esMesDePaga(mes) ? `<p class="hint" style="margin-top:-6px;color:var(--gold)">🎁 Este mes toca paga extra (${eur(+pagasConfig().importe || 0)}): las aportaciones vienen ya con su parte repartida.</p>` : ''}
       <div class="form-card" id="reg-fields">
         ${state.holdings.map((h) => {
@@ -1620,7 +1727,7 @@ function modalRegistrar(mk = null) {
             <div class="field-row">
               <div class="field"><label>Valor el día 1 (€)</label>
                 <input type="text" inputmode="decimal" class="reg-valor" placeholder="0,00" value="${v}" /></div>
-              <div class="field"><label>Aportación (€)</label>
+              <div class="field"><label>Aportación${h.id === iberId ? '' : ' desde Ibercaja'} (€)</label>
                 <input type="text" inputmode="decimal" class="reg-aporte" placeholder="${String(h.plan || 0).replace('.', ',')}" value="${a}" /></div>
             </div>
           </div>`;
@@ -1639,6 +1746,8 @@ function modalRegistrar(mk = null) {
   activarModal(overlay);
 
   $('#reg-cancelar', overlay).onclick = cerrar;
+  const btnIber = $('#reg-ajustar-ibercaja', overlay);
+  if (btnIber) btnIber.onclick = () => { cerrar(); modalAjustarIbercaja(); };
   $('#reg-guardar', overlay).onclick = () => {
     const valores = {}, aportes = {};
     let vacio = true;
@@ -1667,12 +1776,81 @@ function modalRegistrar(mk = null) {
   };
 }
 
+/* ---- Modal: ajustar saldo actual de Ibercaja ---- */
+function modalAjustarIbercaja() {
+  const des = desgloseIbercaja();
+  const cfg = des.cfg;
+  const mesActual = currentMonthKey();
+  const fechaBase = new Date(cfg.fechaBase);
+  const fechaTxt = isFinite(fechaBase.getTime())
+    ? fechaBase.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
+    : 'sin fecha';
+  const conSigno = (n, invertir = false) => {
+    if (Math.abs(n) < 0.005) return eur(0);
+    const positivo = invertir ? n < 0 : n > 0;
+    return `${positivo ? '+' : '−'}${eur(Math.abs(n))}`;
+  };
+  const overlay = document.createElement('div');
+  const pagasTxt = pagasConfig().activo ? ' y las pagas extra' : '';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>Saldo de Ibercaja</h3>
+      <p class="hint" style="margin-top:-6px">La nómina de ${eur(+state.ajustes.ingreso || 0)}${pagasTxt} se ${pagasConfig().activo ? 'añaden' : 'añade'} automáticamente el día de cobro. Los gastos, bizums y aportaciones a inversión se aplican en cuanto los registras.</p>
+      <div class="ibercaja-desglose">
+        <div><span>Saldo confirmado <small>${fechaTxt}</small></span><strong>${eur(des.base)}</strong></div>
+        <div><span>Nóminas automáticas</span><strong class="pct-good">${conSigno(des.nominas)}</strong></div>
+        ${des.pagas > 0 ? `<div><span>Pagas extra automáticas</span><strong class="pct-good">${conSigno(des.pagas)}</strong></div>` : ''}
+        <div><span>Gastos</span><strong class="pct-bad">${des.gastos > 0 ? `−${eur(des.gastos)}` : eur(0)}</strong></div>
+        <div><span>Bizums (neto)</span><strong class="${des.bizums >= 0 ? 'pct-good' : 'pct-bad'}">${conSigno(des.bizums)}</strong></div>
+        <div><span>Traspasos a inversión</span><strong class="${des.traspasos > 0 ? 'pct-bad' : 'pct-good'}">${conSigno(des.traspasos, true)}</strong></div>
+        <div class="total"><span>Saldo actual</span><strong>${eur(des.actual)}</strong></div>
+      </div>
+      <div class="field"><label for="ib-saldo">Nuevo saldo actual (€)</label>
+        <input id="ib-saldo" type="text" inputmode="decimal" value="${des.actual.toFixed(2).replace('.', ',')}" autofocus /></div>
+      <div class="field"><label for="ib-dia">Día de cobro de la nómina</label>
+        <input id="ib-dia" type="number" min="1" max="31" value="${cfg.diaCobro || 1}" /></div>
+      <p class="hint">Al guardar, este saldo será el nuevo punto de partida y debe incluir los gastos y bizums ya registrados. Los movimientos posteriores se aplican automáticamente.</p>
+      <button class="card-link" id="ib-registrar" type="button">Registrar valores del mes ${icono('flecha', 14)}</button>
+      <div class="modal-actions">
+        <button class="btn secondary" id="ib-cancelar" type="button">Cancelar</button>
+        <button class="btn" id="ib-guardar" type="button">Guardar saldo</button>
+      </div>
+    </div>`;
+  const cerrar = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+  $('#modal-root').appendChild(overlay);
+  activarModal(overlay);
+  $('#ib-cancelar', overlay).onclick = cerrar;
+  $('#ib-registrar', overlay).onclick = () => { cerrar(); modalRegistrar(mesActual); };
+  $('#ib-guardar', overlay).onclick = () => {
+    const saldo = parseAmount($('#ib-saldo', overlay).value);
+    if (saldo == null) return toast('Introduce un saldo válido', 'error');
+    const dia = Math.min(31, Math.max(1, parseInt($('#ib-dia', overlay).value, 10) || 1));
+    const cuenta = cuentaIbercajaConfig();
+    cuenta.saldoBase = saldo;
+    cuenta.fechaBase = new Date().toISOString();
+    cuenta.aportesBase = totalAportesInversion();
+    cuenta.diaCobro = dia;
+    state.ajustes.diaCobro = dia;
+    state.ajustes.mod = Date.now();
+    guardarEstado(); cerrar(); toast('Saldo de Ibercaja actualizado'); render();
+  };
+}
+
 /* ============ Vista: Patrimonio ============ */
 function vistaPatrimonio(view) {
   view.classList.add('view-patrimonio');
   const stats = statsPatrimonio();
-  const dist = distribucionCubos().filter((b) => b.total > 0).sort((a, b) => b.total - a.total);
   const saldos = saldosActuales();
+  const totalActual = saldos.total;
+  const ajuste = ajusteIbercaja();
+  const iber = holdingIbercaja();
+  const dist = distribucionCubos()
+    .map((b) => ({ ...b, total: b.id === 'diaadia' ? b.total + ajuste : b.total }))
+    .filter((b) => b.total > 0)
+    .map((b) => ({ ...b, pct: totalActual > 0 ? b.total / totalActual : 0 }))
+    .sort((a, b) => b.total - a.total);
   const ingresos = +state.ajustes.ingreso || 0;
   const gastoMes = totalGastado(currentMonthKey());
   const aportesMes = aportesSnap(currentMonthKey());
@@ -1701,17 +1879,20 @@ function vistaPatrimonio(view) {
   const cuentas = state.holdings.map((h) => {
     const st = statsHolding(h.id);
     const cubo = cuboPorId(h.cubo);
-    const pct = stats.total > 0 ? st.valorActual / stats.total : null;
+    const esIber = iber && h.id === iber.id;
+    const valor = st.valorActual + (esIber ? ajuste : 0);
+    const pct = totalActual > 0 ? valor / totalActual : null;
     const color = colorCubo(h.cubo);
-    return `<button class="pat-account-row" type="button" data-open="${h.id}" aria-label="Ver y registrar ${escapeHtml(h.nombre)}">
+    const tipo = cubo ? cubo.nombre : 'Sin espacio';
+    return `<button class="pat-account-row" type="button" data-open="${h.id}" aria-label="${esIber ? 'Ajustar saldo de ' : 'Ver y registrar '}${escapeHtml(h.nombre)}">
       <span class="pat-account-ico" style="color:${color};background:${color}1a;border-color:${color}30">${iconoCubo(h.cubo)}</span>
       <span class="pat-account-main">
         <strong class="pat-account-name" title="${escapeHtml(h.nombre)}">${escapeHtml(h.nombre)}</strong>
-        <span class="pat-account-type">${escapeHtml(cubo ? cubo.nombre : 'Sin espacio')}</span>
-        <span class="pat-account-amount">${eur(st.valorActual)}</span>
+        <span class="pat-account-type">${escapeHtml(tipo)}${esIber ? ' · automático' : ''}</span>
+        <span class="pat-account-amount">${eur(valor)}</span>
       </span>
       <span class="pat-account-pct">${pct == null ? '—' : fmtPct(pct, { conSigno: false, decimales: 0 })}</span>
-      <span class="pat-account-arrow" aria-hidden="true">${icono('chevron', 15)}</span>
+      <span class="pat-account-arrow" aria-hidden="true">${esIber ? icono('editar', 15) : icono('chevron', 15)}</span>
     </button>`;
   }).join('');
 
@@ -1767,7 +1948,7 @@ function vistaPatrimonio(view) {
       <div class="stack">
         <section class="card pat-total">
           <span class="pat-total-label">Patrimonio total</span>
-          <div class="pat-total-value">${eur(stats.total)}</div>
+          <div class="pat-total-value">${eur(totalActual)}</div>
           <div class="pat-total-trend ${variacion == null ? 'neutral' : variacion < 0 ? 'negative' : 'positive'}">
             ${variacion != null ? `<span class="trend-mark" aria-hidden="true">${variacion < 0 ? '▼' : '▲'}</span>` : ''}
             <strong>${variacion == null ? '—' : fmtPct(variacion, { decimales: 1 })}</strong>
@@ -1803,7 +1984,7 @@ function vistaPatrimonio(view) {
 
         <section class="card">
           <div class="card-head">
-            <div><h2>Evolución</h2><p>Patrimonio registrado mes a mes</p></div>
+            <div><h2>Evolución</h2><p>Patrimonio registrado mes a mes · el saldo actual de Ibercaja incluye movimientos automáticos</p></div>
             ${stats.perfMes != null ? `<span class="pill ${stats.perfMes >= 0 ? 'good' : 'bad'}">${fmtPct(stats.perfMes)} último mes</span>` : ''}
           </div>
           ${chart ? `<div class="chart-wrap">${chart}</div>` : '<div class="empty" style="padding:18px"><span class="big">📈</span>Registra al menos dos meses para ver la evolución.</div>'}
@@ -1865,6 +2046,12 @@ function vistaPatrimonio(view) {
   view.querySelectorAll('[data-open]').forEach((el) => {
     el.onclick = () => {
       const hid = el.dataset.open;
+      const h = holdingPorId(hid);
+      const iberActual = holdingIbercaja();
+      if (h && iberActual && h.id === iberActual.id) {
+        modalAjustarIbercaja();
+        return;
+      }
       const serieH = serieHolding(hid);
       modalRegistrar(serieH.length ? serieH[serieH.length - 1].month : mesActual);
     };
@@ -3641,7 +3828,7 @@ function vistaAjustes(view) {
         <input id="aj-nombre" type="text" placeholder="Ej.: Juan" value="${escapeHtml(state.ajustes.nombre || '')}" /></div>
       <div class="field"><label for="aj-ingreso">Ingreso neto mensual (€)</label>
         <input id="aj-ingreso" type="text" inputmode="decimal" value="${String(state.ajustes.ingreso || 0).replace('.', ',')}" /></div>
-      <p class="hint">El nombre se usa en el saludo de Inicio. El ingreso alimenta el indicador de ahorro del mes en Patrimonio.</p>
+      <p class="hint">El nombre se usa en el saludo de Inicio. El ingreso alimenta el indicador de ahorro del mes y la nómina automática de Ibercaja. El día de cobro se ajusta desde la cuenta Ibercaja en Patrimonio.</p>
     </div>
 
     <div class="card">

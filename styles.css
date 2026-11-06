@@ -1081,6 +1081,23 @@ select {
 .pat-history-bottom { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 3px; color: var(--muted-2); font-size: 0.7rem; }
 .pat-history-bottom strong { color: var(--muted); font-weight: 650; }
 
+.ibercaja-desglose {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 11px 12px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.ibercaja-desglose > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 0.78rem; }
+.ibercaja-desglose span { min-width: 0; }
+.ibercaja-desglose small { color: var(--muted-2); font-size: 0.68rem; margin-left: 4px; }
+.ibercaja-desglose strong { color: var(--text); font-size: 0.8rem; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ibercaja-desglose .total { margin-top: 2px; padding-top: 8px; border-top: 1px solid var(--border); color: var(--text); font-weight: 700; }
+.ibercaja-desglose .total strong { font-size: 0.92rem; font-weight: 800; }
+
 @media (max-width: 760px) {
   .view-patrimonio .pat-layout { grid-template-columns: minmax(0, 1fr); }
 }
